@@ -14,7 +14,13 @@ app = Flask(__name__)
 for section in config.sections():
     for k, v in config.items(section):
         app.config[k] = v
-# TODO add parameter port, construct variable "base_url" etc ...
+
+if app.config['port'] == 80:
+    app.config['base_url'] = "http://%s" % app.config['hostname']
+else:
+    app.config['base_url'] = "http://%s:%s" % (app.config['hostname'],
+                                               app.config['port'])
+
 
 def get_md5(filename):
     return hashlib.md5(open(filename, 'rb').read()).hexdigest()
@@ -35,7 +41,8 @@ def clean_files(file_list):
         lines = f.readlines()
     with open(file_list, 'w') as f:
         for line in lines:
-            if int(line.split('|')[2]) > int(time.time()-int(app.config['expire'])):
+            if int(line.split('|')[2]) > int(time.time() -
+               int(app.config['expire'])):
                 f.write("%s" % line)
             else:
                 os.remove(line.split('|')[1])
@@ -51,7 +58,7 @@ def infos_file(id_file):
         int(file_infos['timestamp']) +
         int(app.config['expire'])).strftime('%d-%m-%Y %H:%M:%S')
     file_infos['type'] = magic.from_file(infos[1])
-    file_infos['url'] = "http://%s:5000/%s" % (app.config['hostname'], id_file)
+    file_infos['url'] = "%s/%s" % (app.config['base_url'], id_file)
 
     return file_infos
 
@@ -81,7 +88,7 @@ def upload_file():
             with open(app.config['file_list'], 'a') as f:
                 f.writelines("%s|%s|%s\n" % (file_md5,
                              full_filename, int(time.time())))
-            return "http://%s:5000/%s" % (app.config['hostname'], file_md5)
+            return "%s/%s" % (app.config['base_url'], file_md5)
     return '''
     <!doctype html>
     <title>Pastefile</title>
@@ -122,4 +129,4 @@ def ls():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0', port=int(app.config['port']), debug=True)
