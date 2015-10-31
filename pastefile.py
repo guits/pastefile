@@ -22,6 +22,14 @@ else:
                                                app.config['port'])
 
 
+def human_readable(size):
+    for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
+        if size < 1024.0:
+            return "%2f%s" % (size, unit)
+        size /= 1024.0
+    return "%2f%s" % (size, 'Y')
+
+
 def get_md5(filename):
     return hashlib.md5(open(filename, 'rb').read()).hexdigest()
 
@@ -58,6 +66,7 @@ def infos_file(id_file):
         int(file_infos['timestamp']) +
         int(app.config['expire'])).strftime('%d-%m-%Y %H:%M:%S')
     file_infos['type'] = magic.from_file(infos[1])
+    file_infos['size'] = os.stat(infos[1]).st_size
     file_infos['url'] = "%s/%s" % (app.config['base_url'], id_file)
 
     return file_infos
