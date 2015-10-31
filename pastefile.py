@@ -27,7 +27,7 @@ def human_readable(size):
         if size < 1024.0:
             return "%2f%s" % (size, unit)
         size /= 1024.0
-    return "%2f%s" % (size, 'Y')
+    return "%.2f%s" % (size, 'Y')
 
 
 def get_md5(filename):
@@ -66,7 +66,7 @@ def infos_file(id_file):
         int(file_infos['timestamp']) +
         int(app.config['expire'])).strftime('%d-%m-%Y %H:%M:%S')
     file_infos['type'] = magic.from_file(infos[1])
-    file_infos['size'] = os.stat(infos[1]).st_size
+    file_infos['size'] = human_readable(os.stat(infos[1]).st_size)
     file_infos['url'] = "%s/%s" % (app.config['base_url'], id_file)
 
     return file_infos
