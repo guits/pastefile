@@ -15,6 +15,10 @@ for section in config.sections():
     for k, v in config.items(section):
         app.config[k] = v
 
+for app_dir in ['upload_folder', 'tmp_folder']:
+    if not os.path.exists(app.config[app_dir]):
+        os.makedirs(app.config[app_dir])
+
 if app.config['port'] == 80:
     app.config['base_url'] = "http://%s" % app.config['hostname']
 else:
