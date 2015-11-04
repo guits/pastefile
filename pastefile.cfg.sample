@@ -1,0 +1,7 @@
+[global]
+hostname=pastefile.fr
+upload_folder=/opt/pydl/files/
+file_list=/opt/pydl/uploaded_files
+tmp_folder=/opt/pydl/tmp
+expire=86400
+port=5000
