@@ -6,6 +6,7 @@ import datetime
 import ConfigParser
 import logging
 import tempfile
+from jsondb import JsonDB
 from flask import Flask, request, send_from_directory, abort, jsonify
 from werkzeug import secure_filename
 
@@ -50,38 +51,32 @@ def get_md5(filename):
 
 
 def get_infos_file_from_md5(md5):
-    with open(app.config['file_list'], 'r') as f:
-        lines = f.readlines()
-    for line in lines:
-        if line.split('|')[0] == md5:
-            return (line.split('|')[0],
-                    line.split('|')[1],
-                    line.split('|')[2].rstrip('\n'))
+    with JsonDB(app.config['file_list']) as db:
+        print db.read(md5)
+        return db.read(md5)
 
 
 def clean_files(file_list):
-    with open(file_list, 'r') as f:
-        lines = f.readlines()
-    with open(file_list, 'w') as f:
-        for line in lines:
-            if int(line.split('|')[2]) > int(time.time() -
+    with JsonDB(file_list) as db:
+        for k, v in db.db.iteritems():
+            if int(db.db[k]['timestamp']) < int(time.time() -
                int(app.config['expire'])):
-                f.write("%s" % line)
-            else:
-                os.remove(line.split('|')[1])
+                db.db.delete(k)
+                os.remove(db.db[k]['storage_full_filename'])
 
 
 def infos_file(id_file):
     infos = get_infos_file_from_md5(id_file)
+    print infos
     file_infos = {
-        'name': os.path.basename(infos[1]),
+        'name': os.path.basename(infos['real_full_filename']),
         'md5': id_file,
-        'timestamp': infos[2],
+        'timestamp': infos['timestamp'],
         'expire': datetime.datetime.fromtimestamp(
-            int(infos[2]) + int(app.config['expire'])).strftime(
+            int(infos['timestamp']) + int(app.config['expire'])).strftime(
                 '%d-%m-%Y %H:%M:%S'),
-        'type': magic.from_file(infos[1]),
-        'size': human_readable(os.stat(infos[1]).st_size),
+        'type': magic.from_file(infos['storage_full_filename']),
+        'size': human_readable(os.stat(infos['storage_full_filename']).st_size),
         'url': "%s/%s" % (app.config['base_url'], id_file)
     }
     return file_infos
@@ -101,19 +96,16 @@ def upload_file():
             file_md5 = get_md5(tmp_full_filename)
             real_full_filename = os.path.join(app.config['upload_folder'], filename)
             storage_full_filename = os.path.join(app.config['upload_folder'], file_md5)
-            with open(app.config['file_list'], 'r') as f:
-                lines = f.readlines()
-            for line in lines:
-                md5 = line.split('|')[0]
-                path = line.split('|')[1].rstrip('\n')
-                os.path.basename(path)
-                if md5 == file_md5:
+            with JsonDB(app.config['file_list']) as db:
+                if file_md5 in db.db:
                     os.remove(tmp_full_filename)
                     return abort(403)
+                db.write(file_md5, {
+                    'real_full_filename': real_full_filename,
+                    'storage_full_filename': storage_full_filename,
+                    'timestamp': int(time.time()),
+                })
             os.rename(tmp_full_filename, storage_full_filename)
-            with open(app.config['file_list'], 'a') as f:
-                f.writelines("%s|%s|%s\n" % (file_md5,
-                             real_full_filename, int(time.time())))
             return "%s/%s\n" % (app.config['base_url'], file_md5)
     return '''
     <!doctype html>
@@ -134,23 +126,20 @@ def infos(id_file):
 
 @app.route('/<id_file>', methods=['GET'])
 def get_file(id_file):
-    with open(app.config['file_list'], 'r') as f:
-        for line in f:
-            md5 = line.split('|')[0]
-            filename = line.split('|')[1].split('/')[-1]
-            if md5 == id_file:
-                return send_from_directory(app.config['upload_folder'],
-                                           filename.rstrip('\n'))
+    with JsonDB(app.config['file_list']) as db:
+        filename = db.db[id_file]['storage_full_filename']
+        print filename
+        return send_from_directory(app.config['upload_folder'],
+                                   os.path.basename(filename))
 
 
 @app.route('/ls', methods=['GET'])
 def ls():
     clean_files(app.config['file_list'])
     files_list_infos = {}
-    with open(app.config['file_list'], 'r') as f:
-        for line in f:
-            files_list_infos[line.split('|')[0]] = infos_file(
-                line.split('|')[0])
+    with JsonDB(app.config['file_list']) as db:
+        for k, v in db.db.iteritems():
+            files_list_infos[k] = infos_file(k)
     return jsonify(files_list_infos)
 
 
