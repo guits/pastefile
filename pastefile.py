@@ -4,6 +4,7 @@ import hashlib
 import magic
 import datetime
 import ConfigParser
+import tempfile
 from flask import Flask, request, send_from_directory, abort, jsonify
 from werkzeug import secure_filename
 
@@ -19,7 +20,7 @@ for app_dir in ['upload_folder', 'tmp_folder']:
     if not os.path.exists(app.config[app_dir]):
         os.makedirs(app.config[app_dir])
 
-if app.config['port'] == 80:
+if app.config['port'] == str(80):
     app.config['base_url'] = "http://%s" % app.config['hostname']
 else:
     app.config['base_url'] = "http://%s:%s" % (app.config['hostname'],
@@ -83,25 +84,27 @@ def upload_file():
         file = request.files['file']
         if file:
             filename = secure_filename(file.filename)
-            tmp_full_filename = os.path.join(
-                app.config['tmp_folder'], filename)
-            full_filename = os.path.join(app.config['upload_folder'], filename)
+            fd, tmp_full_filename = tempfile.mkstemp(
+                prefix='processing-', dir=app.config['upload_folder'])
+            os.close(fd)
             file.save(os.path.join(tmp_full_filename))
             file_md5 = get_md5(tmp_full_filename)
+            real_full_filename = os.path.join(app.config['upload_folder'], filename)
+            storage_full_filename = os.path.join(app.config['upload_folder'], file_md5)
             with open(app.config['file_list'], 'r') as f:
                 lines = f.readlines()
             for line in lines:
                 md5 = line.split('|')[0]
                 path = line.split('|')[1].rstrip('\n')
                 os.path.basename(path)
-                if md5 == file_md5 or os.path.basename(path) == filename:
+                if md5 == file_md5:
                     os.remove(tmp_full_filename)
                     return abort(403)
-            os.rename(tmp_full_filename, full_filename)
+            os.rename(tmp_full_filename, storage_full_filename)
             with open(app.config['file_list'], 'a') as f:
                 f.writelines("%s|%s|%s\n" % (file_md5,
-                             full_filename, int(time.time())))
-            return "%s/%s" % (app.config['base_url'], file_md5)
+                             real_full_filename, int(time.time())))
+            return "%s/%s\n" % (app.config['base_url'], file_md5)
     return '''
     <!doctype html>
     <title>Pastefile</title>
