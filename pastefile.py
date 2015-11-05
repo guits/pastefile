@@ -62,17 +62,17 @@ def clean_files(file_list):
 
 def infos_file(id_file):
     infos = get_infos_file_from_md5(id_file)
-    file_infos = {}
-    file_infos['name'] = os.path.basename(infos[1])
-    file_infos['md5'] = id_file
-    file_infos['timestamp'] = infos[2]
-    file_infos['expire'] = datetime.datetime.fromtimestamp(
-        int(file_infos['timestamp']) +
-        int(app.config['expire'])).strftime('%d-%m-%Y %H:%M:%S')
-    file_infos['type'] = magic.from_file(infos[1])
-    file_infos['size'] = human_readable(os.stat(infos[1]).st_size)
-    file_infos['url'] = "%s/%s" % (app.config['base_url'], id_file)
-
+    file_infos = {
+        'name': os.path.basename(infos[1]),
+        'md5': id_file,
+        'timestamp': infos[2],
+        'expire': datetime.datetime.fromtimestamp(
+            int(infos[2]) + int(app.config['expire'])).strftime(
+                '%d-%m-%Y %H:%M:%S'),
+        'type': magic.from_file(infos[1]),
+        'size': human_readable(os.stat(infos[1]).st_size),
+        'url': "%s/%s" % (app.config['base_url'], id_file)
+    }
     return file_infos
 
 
