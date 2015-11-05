@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import json
+import os
 import logging
 
 LOG = logging.getLogger()
@@ -13,10 +14,25 @@ LOG.addHandler(hdl)
 
 
 class JsonDB(object):
-    def __init__(self, dbfile, logger=__name__):
+    def __init__(self, dbfile, logger=__name__, lockfile='/tmp/jsondb.lock'):
         self._dbfile = dbfile
         self._logger = logging.getLogger(logger)
+        self._lockfile = lockfile
         self._db = {}
+
+    def __enter__(self):
+        self.load()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.save()
+
+    def _lock(self, lockfile):
+        if os.path.isexists(lockfile):
+            pass
+
+    def _release(self):
+        pass
 
     def load(self):
         try:
@@ -46,7 +62,10 @@ mydb.write('5536fc9343e9ab0aca071354084dd3cc', {
     "timestamp": "1446718197",
     "type": "ASCII text",
     "url": "http://pastefile.fr/44b204457619bd448078f36ae5b500e0"
-  })
+})
 mydb.save()
 foo = mydb.read('5536fc9343e9ab0aca071354084dd3cc')
 print foo
+
+with JsonDB('/tmp/tototo') as db:
+    print db.read('5536fc9343e9ab0aca071354084dd3cc')
