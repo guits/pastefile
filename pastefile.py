@@ -4,8 +4,18 @@ import hashlib
 import magic
 import datetime
 import ConfigParser
+import logging
 from flask import Flask, request, send_from_directory, abort, jsonify
 from werkzeug import secure_filename
+
+LOG = logging.getLogger()
+LOG.setLevel(logging.DEBUG)
+hdl = logging.StreamHandler()
+logformat = '%(asctime)s %(levelname)s -: %(message)s'
+formatter = logging.Formatter(logformat)
+hdl.setFormatter(formatter)
+LOG.addHandler(hdl)
+
 
 config = ConfigParser.ConfigParser()
 config.read('./pastefile.cfg')
