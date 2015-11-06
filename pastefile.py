@@ -7,7 +7,7 @@ import ConfigParser
 import logging
 import tempfile
 from jsondb import JsonDB
-from flask import Flask, request, send_from_directory, abort, jsonify
+from flask import Flask, request, send_from_directory, abort, jsonify, render_template
 from werkzeug import secure_filename
 
 LOG = logging.getLogger()
@@ -141,6 +141,11 @@ def ls():
         for k, v in db.db.iteritems():
             files_list_infos[k] = infos_file(k)
     return jsonify(files_list_infos)
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
 
 
 if __name__ == '__main__':
