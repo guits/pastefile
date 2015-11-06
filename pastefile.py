@@ -20,7 +20,7 @@ LOG.addHandler(hdl)
 
 
 config = ConfigParser.ConfigParser()
-config.read('./pastefile.cfg')
+config.read('/etc/pastefile.cfg')
 
 app = Flask(__name__)
 for section in config.sections():
