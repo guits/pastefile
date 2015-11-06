@@ -128,7 +128,9 @@ def get_file(id_file):
         if id_file in db.db:
             filename = db.db[id_file]['storage_full_filename']
             return send_from_directory(app.config['upload_folder'],
-                                       os.path.basename(filename))
+                                       os.path.basename(filename),
+                                       attachment_filename=os.path.basename(db.db[id_file]['real_full_filename']),
+                                       as_attachment=True)
         else:
             return abort(404)
 
