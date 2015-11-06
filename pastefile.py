@@ -52,7 +52,6 @@ def get_md5(filename):
 
 def get_infos_file_from_md5(md5):
     with JsonDB(app.config['file_list']) as db:
-        print db.read(md5)
         return db.read(md5)
 
 
@@ -67,7 +66,6 @@ def clean_files(file_list):
 
 def infos_file(id_file):
     infos = get_infos_file_from_md5(id_file)
-    print infos
     file_infos = {
         'name': os.path.basename(infos['real_full_filename']),
         'md5': id_file,
@@ -127,10 +125,12 @@ def infos(id_file):
 @app.route('/<id_file>', methods=['GET'])
 def get_file(id_file):
     with JsonDB(app.config['file_list']) as db:
-        filename = db.db[id_file]['storage_full_filename']
-        print filename
-        return send_from_directory(app.config['upload_folder'],
-                                   os.path.basename(filename))
+        if id_file in db.db:
+            filename = db.db[id_file]['storage_full_filename']
+            return send_from_directory(app.config['upload_folder'],
+                                       os.path.basename(filename))
+        else:
+            return abort(404)
 
 
 @app.route('/ls', methods=['GET'])
