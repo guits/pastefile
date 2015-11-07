@@ -10,13 +10,25 @@ from jsondb import JsonDB
 from flask import Flask, request, send_from_directory, abort, jsonify, render_template
 from werkzeug import secure_filename
 
-LOG = logging.getLogger()
+LOG = logging.getLogger('pastefile')
 LOG.setLevel(logging.DEBUG)
-hdl = logging.StreamHandler()
-logformat = '%(asctime)s %(levelname)s -: %(message)s'
-formatter = logging.Formatter(logformat)
-hdl.setFormatter(formatter)
-LOG.addHandler(hdl)
+
+hdl_file = logging.FileHandler(filename='/var/log/pastefile.log')
+hdl_file.setLevel(logging.DEBUG)
+
+hdl_stream = logging.StreamHandler()
+hdl_stream.setLevel(logging.INFO)
+
+
+formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+hdl_file.setFormatter(formatter_file)
+
+formatter_stream = logging.Formatter('%(message)s')
+hdl_stream.setFormatter(formatter_stream)
+
+
+LOG.addHandler(hdl_file)
+LOG.addHandler(hdl_stream)
 
 
 config = ConfigParser.ConfigParser()
