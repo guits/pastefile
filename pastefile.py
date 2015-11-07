@@ -110,6 +110,7 @@ def upload_file():
                     'timestamp': int(time.time()),
                 })
             os.rename(tmp_full_filename, storage_full_filename)
+            LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
             return "%s/%s\n" % (app.config['base_url'], file_md5)
     return '''
     <!doctype html>
@@ -133,6 +134,7 @@ def get_file(id_file):
     with JsonDB(app.config['file_list']) as db:
         if id_file in db.db:
             filename = db.db[id_file]['storage_full_filename']
+            LOG.info("[GET] Client %s has requested: %s (%s)" % (request.remote_addr, os.path.basename(db.db[id_file]['real_full_filename']), id_file))
             return send_from_directory(app.config['upload_folder'],
                                        os.path.basename(filename),
                                        attachment_filename=os.path.basename(db.db[id_file]['real_full_filename']),
