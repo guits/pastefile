@@ -5,3 +5,4 @@ file_list=/opt/pydl/uploaded_files
 tmp_folder=/opt/pydl/tmp
 expire=86400
 port=5000
+log=/tmp/pastefile.log
