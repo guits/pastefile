@@ -10,25 +10,6 @@ from jsondb import JsonDB
 from flask import Flask, request, send_from_directory, abort, jsonify, render_template
 from werkzeug import secure_filename
 
-LOG = logging.getLogger('pastefile')
-LOG.setLevel(logging.DEBUG)
-
-hdl_file = logging.FileHandler(filename='/var/log/pastefile.log')
-hdl_file.setLevel(logging.DEBUG)
-
-hdl_stream = logging.StreamHandler()
-hdl_stream.setLevel(logging.INFO)
-
-
-formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-hdl_file.setFormatter(formatter_file)
-
-formatter_stream = logging.Formatter('%(message)s')
-hdl_stream.setFormatter(formatter_stream)
-
-
-LOG.addHandler(hdl_file)
-LOG.addHandler(hdl_stream)
 
 
 config = ConfigParser.ConfigParser()
@@ -38,6 +19,19 @@ app = Flask(__name__)
 for section in config.sections():
     for k, v in config.items(section):
         app.config[k] = v
+
+LOG = logging.getLogger('pastefile')
+LOG.setLevel(logging.DEBUG)
+hdl_file = logging.FileHandler(filename=app.config['log'])
+hdl_file.setLevel(logging.DEBUG)
+hdl_stream = logging.StreamHandler()
+hdl_stream.setLevel(logging.INFO)
+formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+hdl_file.setFormatter(formatter_file)
+formatter_stream = logging.Formatter('%(message)s')
+hdl_stream.setFormatter(formatter_stream)
+LOG.addHandler(hdl_file)
+LOG.addHandler(hdl_stream)
 
 for app_dir in ['upload_folder', 'tmp_folder']:
     if not os.path.exists(app.config[app_dir]):
