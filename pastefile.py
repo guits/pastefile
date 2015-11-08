@@ -4,16 +4,24 @@ import hashlib
 import magic
 import datetime
 import ConfigParser
+import argparse
 import logging
 import tempfile
 from jsondb import JsonDB
-from flask import Flask, request, send_from_directory, abort, jsonify, render_template
+from flask import Flask, request, send_from_directory, abort
+from flask import jsonify, render_template
 from werkzeug import secure_filename
 
+default_config_file = '/etc/pastefile.cfg'
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-c", "--config", help="specify config file, default: %s"
+                    % default_config_file, action="store", metavar="FILE", default=default_config_file)
+
+args = parser.parse_args()
 
 config = ConfigParser.ConfigParser()
-config.read('/etc/pastefile.cfg')
+config.read(args.config)
 
 app = Flask(__name__)
 for section in config.sections():
