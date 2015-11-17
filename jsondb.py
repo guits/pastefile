@@ -3,6 +3,25 @@
 import json
 import os
 import logging
+import signal
+import errno
+import fcntl
+from contextlib import contextmanager
+
+
+@contextmanager
+def timeout(seconds):
+    def timeout_handler(signum, frame):
+        pass
+
+    original_handler = signal.signal(signal.SIGALRM, timeout_handler)
+
+    try:
+        signal.alarm(seconds)
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, original_handler)
 
 
 class JsonDB(object):
@@ -22,6 +41,14 @@ class JsonDB(object):
     def _lock(self, lockfile):
         if os.path.isexists(lockfile):
             pass
+        with timeout(3):
+            f = open(lockfile, 'w')
+            try:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            except IOError as e:
+                if e.errno != errno.EINTR:
+                    raise e
+                self._logger.DEBUG('Lock timed out!')
 
     def _release(self):
         pass
