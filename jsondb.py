@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import json
-import os
 import logging
 import signal
 import errno
@@ -25,38 +24,36 @@ def timeout(seconds):
 
 
 class JsonDB(object):
-    def __init__(self, dbfile, logger=__name__, lockfile='/tmp/jsondb.lock'):
+    def __init__(self, dbfile, logger=__name__):
         self._dbfile = dbfile
         self._logger = logging.getLogger(logger)
-        self._lockfile = lockfile
         self.db = {}
 
     def __enter__(self):
-        self.load()
+        self._lock()
         return self
 
     def __exit__(self, type, value, traceback):
         self.save()
+        self._release()
 
-    def _lock(self, lockfile):
-        if os.path.isexists(lockfile):
-            pass
+    def _lock(self):
         with timeout(3):
-            f = open(lockfile, 'w')
+            self._f = open(self._dbfile, 'w+')
             try:
-                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                fcntl.flock(self._f.fileno(), fcntl.LOCK_EX)
+                self.load()
             except IOError as e:
                 if e.errno != errno.EINTR:
                     raise e
                 self._logger.DEBUG('Lock timed out!')
 
     def _release(self):
-        pass
+        self._f.close()
 
     def load(self):
         try:
-            with open(self._dbfile, 'r') as f:
-                self.db = json.load(f)
+            self.db = json.load(self._f)
         except (IOError, AttributeError, ValueError) as e:
             self._logger.debug("Can't load file: %s" % e)
 
