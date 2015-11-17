@@ -24,10 +24,11 @@ def timeout(seconds):
 
 
 class JsonDB(object):
-    def __init__(self, dbfile, logger=__name__):
+    def __init__(self, dbfile, logger=__name__, timeout=5):
         self._dbfile = dbfile
         self._logger = logging.getLogger(logger)
         self.db = {}
+        self._timeout = timeout
 
     def __enter__(self):
         self._lock()
@@ -38,7 +39,7 @@ class JsonDB(object):
         self._release()
 
     def _lock(self):
-        with timeout(3):
+        with timeout(self._timeout):
             self._f = open(self._dbfile, 'w+')
             try:
                 fcntl.flock(self._f.fileno(), fcntl.LOCK_EX)
