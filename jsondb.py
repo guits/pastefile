@@ -2,7 +2,6 @@
 
 import json
 import logging
-import errno
 import fcntl
 import time
 
@@ -11,7 +10,6 @@ def timeout(timeout=3, start=None):
     now = int(time.time())
     if (now - start) >= 3:
         return True
-#logger.DEBUG('Lock timed out!')
     return False
 
 
@@ -21,14 +19,16 @@ class JsonDB(object):
         self._logger = logging.getLogger(logger)
         self.db = {}
         self._timeout = timeout
+        self.lock_error = False
 
     def __enter__(self):
         self._lock()
         return self
 
     def __exit__(self, type, value, traceback):
-        self.save()
-        self._release()
+        if not self.lock_error:
+            self.save()
+            self._release()
 
     def _lock(self):
         self._start = int(time.time())
@@ -37,12 +37,13 @@ class JsonDB(object):
                 self._f = open(self._dbfile, 'w+')
                 fcntl.flock(self._f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 self.load()
-            except IOError as e:
-                if e.errno != errno.EINTR:
-                    raise e
+                return True
+            except IOError:
                 time.sleep(0.01)
                 if timeout(timeout=self._timeout, start=self._start):
-                    return True
+                    self.lock_error = True
+                    self._logger.critical('Unable to lock')
+                    break
 
     def _release(self):
         self._f.close()

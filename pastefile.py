@@ -66,11 +66,16 @@ def get_md5(filename):
 
 def get_infos_file_from_md5(md5):
     with JsonDB(app.config['file_list']) as db:
+        if db.lock_error:
+            return "Lock timed out"
         return db.read(md5)
 
 
 def clean_files(file_list):
     with JsonDB(file_list) as db:
+        if db.lock_error:
+            LOG.warning('Cant clean files')
+            return False
         for k, v in db.db.iteritems():
             if int(db.db[k]['timestamp']) < int(time.time() -
                int(app.config['expire'])):
@@ -96,8 +101,8 @@ def infos_file(id_file):
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
-    clean_files(app.config['file_list'])
     if request.method == 'POST':
+        clean_files(app.config['file_list'])
         file = request.files['file']
         if file:
             filename = secure_filename(file.filename)
@@ -109,6 +114,8 @@ def upload_file():
             real_full_filename = os.path.join(app.config['upload_folder'], filename)
             storage_full_filename = os.path.join(app.config['upload_folder'], file_md5)
             with JsonDB(app.config['file_list']) as db:
+                if db.lock_error:
+                    return "Lock timed out"
                 if file_md5 in db.db:
                     os.remove(tmp_full_filename)
                     return abort(403)
@@ -140,6 +147,8 @@ def infos(id_file):
 @app.route('/<id_file>', methods=['GET'])
 def get_file(id_file):
     with JsonDB(app.config['file_list']) as db:
+        if db.lock_error:
+            return "Lock timed out"
         if id_file in db.db:
             filename = db.db[id_file]['storage_full_filename']
             LOG.info("[GET] Client %s has requested: %s (%s)" % (request.remote_addr, os.path.basename(db.db[id_file]['real_full_filename']), id_file))
@@ -156,6 +165,8 @@ def ls():
     clean_files(app.config['file_list'])
     files_list_infos = {}
     with JsonDB(app.config['file_list']) as db:
+        if db.lock_error:
+            return "Lock timed out"
         for k, v in db.db.iteritems():
             files_list_infos[k] = infos_file(k)
     return jsonify(files_list_infos)
