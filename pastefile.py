@@ -88,18 +88,20 @@ def clean_files(file_list):
 
 def infos_file(id_file):
     infos = get_infos_file_from_md5(id_file)
-    file_infos = {
-        'name': os.path.basename(infos['real_full_filename']),
-        'md5': id_file,
-        'timestamp': infos['timestamp'],
-        'expire': datetime.datetime.fromtimestamp(
-            int(infos['timestamp']) + int(app.config['expire'])).strftime(
-                '%d-%m-%Y %H:%M:%S'),
-        'type': magic.from_file(infos['storage_full_filename']),
-        'size': human_readable(os.stat(infos['storage_full_filename']).st_size),
-        'url': "%s/%s" % (app.config['base_url'], id_file)
-    }
-    return file_infos
+    if infos:
+        file_infos = {
+            'name': os.path.basename(infos['real_full_filename']),
+            'md5': id_file,
+            'timestamp': infos['timestamp'],
+            'expire': datetime.datetime.fromtimestamp(
+                int(infos['timestamp']) + int(app.config['expire'])).strftime(
+                    '%d-%m-%Y %H:%M:%S'),
+            'type': magic.from_file(infos['storage_full_filename']),
+            'size': human_readable(os.stat(infos['storage_full_filename']).st_size),
+            'url': "%s/%s" % (app.config['base_url'], id_file)
+        }
+        return file_infos
+    return False
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -167,11 +169,14 @@ def get_file(id_file):
 def ls():
     clean_files(app.config['file_list'])
     files_list_infos = {}
-    with JsonDB(app.config['file_list']) as db:
+    with JsonDB(dbfile=app.config['file_list']) as db:
         if db.lock_error:
             return "Lock timed out"
-        for k, v in db.db.iteritems():
-            files_list_infos[k] = infos_file(k)
+        instant_db = db.db
+    for k, v in instant_db.iteritems():
+        if not infos_file(k):
+            return abort(500)
+        files_list_infos[k] = infos_file(k)
     return jsonify(files_list_infos)
 
 
