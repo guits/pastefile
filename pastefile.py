@@ -68,14 +68,14 @@ def get_md5(filename):
 
 
 def get_infos_file_from_md5(md5):
-    with JsonDB(app.config['file_list']) as db:
+    with JsonDB(dbfile=app.config['file_list']) as db:
         if db.lock_error:
-            return "Lock timed out"
+            return False
         return db.read(md5)
 
 
 def clean_files(file_list):
-    with JsonDB(file_list) as db:
+    with JsonDB(dbfile=file_list) as db:
         if db.lock_error:
             LOG.warning('Cant clean files')
             return False
@@ -118,7 +118,7 @@ def upload_file():
             file_md5 = get_md5(tmp_full_filename)
             real_full_filename = os.path.join(app.config['upload_folder'], filename)
             storage_full_filename = os.path.join(app.config['upload_folder'], file_md5)
-            with JsonDB(app.config['file_list']) as db:
+            with JsonDB(dbfile=app.config['file_list']) as db:
                 if db.lock_error:
                     return "Lock timed out"
                 if file_md5 in db.db:
@@ -151,7 +151,7 @@ def infos(id_file):
 
 @app.route('/<id_file>', methods=['GET'])
 def get_file(id_file):
-    with JsonDB(app.config['file_list']) as db:
+    with JsonDB(dbfile=app.config['file_list']) as db:
         if db.lock_error:
             return "Lock timed out"
         if id_file in db.db:
