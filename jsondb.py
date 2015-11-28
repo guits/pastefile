@@ -14,7 +14,7 @@ def timeout(timeout=3, start=None):
 
 
 class JsonDB(object):
-    def __init__(self, dbfile, logger=__name__, timeout=5):
+    def __init__(self, dbfile, logger=__name__, timeout=60):
         self._dbfile = dbfile
         self._logger = logging.getLogger(logger)
         self.db = {}
