@@ -23,6 +23,10 @@ parser.add_argument("-c", "--config", help="specify config file, default: %s"
 
 args = parser.parse_args()
 
+if not os.path.isfile(args.config):
+    print 'Error: config file %s not found' % args.config
+    exit(1)
+
 config = ConfigParser.ConfigParser()
 config.read(args.config)
 
