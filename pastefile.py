@@ -123,7 +123,7 @@ def upload_file():
                     return "Lock timed out"
                 if file_md5 in db.db:
                     os.remove(tmp_full_filename)
-                    return abort(403)
+                    return "File already exists\n%s/%s" % (app.config['base_url'], file_md5)
                 db.write(file_md5, {
                     'real_full_filename': real_full_filename,
                     'storage_full_filename': storage_full_filename,
