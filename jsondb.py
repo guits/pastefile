@@ -34,7 +34,7 @@ class JsonDB(object):
         self._start = int(time.time())
         while True:
             try:
-                self._f = open(self._dbfile, 'w+')
+                self._f = open(self._dbfile, 'r+')
                 fcntl.flock(self._f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 self.load()
                 return True
