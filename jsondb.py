@@ -32,9 +32,11 @@ class JsonDB(object):
 
     def _lock(self):
         self._start = int(time.time())
+        # Open the file for lock only. If the file does not exist,
+        # it will be created
+        self._f = open(self._dbfile, 'a')
         while True:
             try:
-                self._f = open(self._dbfile, 'r+')
                 fcntl.flock(self._f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 self.load()
                 return True
