@@ -59,6 +59,14 @@ else:
                                                app.config['port'])
 
 
+def build_base_url(env=None):
+    return "%s://%s" % (env['wsgi.url_scheme'], env['HTTP_HOST'])
+
+#TODO: make something better for the multiple call to build_base_url(env=request.environ)
+def usage(env=None):
+    return "Usage:\n\n\n  Upload a file:\ncurl -F file=@<file> %s\n\n  View all uploaded files:\ncurl %s/ls\n\n  Get infos about one file:\ncurl %s/<id>/infos\n\n  Get a file:\ncurl -JO %s/<id>\n\n\n" % (build_base_url(env=env), build_base_url(env=env), build_base_url(env=env), build_base_url(env=env))
+
+
 def human_readable(size):
     for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
         if size < 1024.0:
@@ -90,7 +98,7 @@ def clean_files(file_list):
                 os.remove(db.db[k]['storage_full_filename'])
 
 
-def infos_file(id_file):
+def infos_file(id_file, env=None):
     infos = get_infos_file_from_md5(id_file)
     if infos:
         file_infos = {
@@ -102,12 +110,12 @@ def infos_file(id_file):
                     '%d-%m-%Y %H:%M:%S'),
             'type': magic.from_file(infos['storage_full_filename']),
             'size': human_readable(os.stat(infos['storage_full_filename']).st_size),
-            'url': "%s/%s" % (app.config['base_url'], id_file)
+            'url': "%s/%s" % (build_base_url(env=env), id_file)
         }
         return file_infos
     return False
 
-
+#TODO: make something better for the multiple call to build_base_url(env=request.environ)
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
@@ -135,21 +143,35 @@ def upload_file():
                 })
             os.rename(tmp_full_filename, storage_full_filename)
             LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
-            return "%s/%s\n" % (app.config['base_url'], file_md5)
-    return '''
-    <!doctype html>
-    <title>Pastefile</title>
-    <h1>Upload new File</h1>
-    <form action="" method=post enctype=multipart/form-data>
-      <p><input type=file name=file>
-         <input type=submit value=Upload>
-    </form>
-    '''
+            return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
+    if 'curl' in request.headers.get('User-Agent'):
+        return usage(env=request.environ)
+    else:
+        return '''
+        <!doctype html>
+        <title>Pastefile</title>
+        <h1>Upload new File</h1>
+        <form action="" method=post enctype=multipart/form-data>
+          <p><input type=file name=file>
+             <input type=submit value=Upload>
+        </form><br><br>
+        Usage:<br><br>
+
+
+          View all uploaded files:<br>
+            %s/ls<br><br>
+
+          Get infos about one file:<br>
+            %s/&#60;id&#62;/infos<br><br>
+
+          Get a file:<br>
+            %s/&#60;id&#62;
+        ''' % (build_base_url(env=request.environ), build_base_url(env=request.environ), build_base_url(env=request.environ))
 
 
 @app.route('/<id_file>/infos', methods=['GET'])
 def infos(id_file):
-    file_infos = infos_file(id_file)
+    file_infos = infos_file(id_file, env=request.environ)
     return jsonify(file_infos)
 
 
@@ -178,9 +200,9 @@ def ls():
             return "Lock timed out"
         instant_db = db.db
     for k, v in instant_db.iteritems():
-        if not infos_file(k):
+        if not infos_file(k, env=request.environ):
             return abort(500)
-        files_list_infos[k] = infos_file(k)
+        files_list_infos[k] = infos_file(k, env=request.environ)
     return jsonify(files_list_infos)
 
 
