@@ -35,7 +35,7 @@ for section in config.sections():
     for k, v in config.items(section):
         app.config[k] = v
 
-LOG = logging.getLogger('pastefile')
+LOG = logging.getLogger()
 LOG.setLevel(logging.DEBUG)
 hdl_file = logging.FileHandler(filename=app.config['log'])
 hdl_file.setLevel(logging.DEBUG)
