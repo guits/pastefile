@@ -18,8 +18,11 @@ from werkzeug import secure_filename
 default_config_file = '/etc/pastefile.cfg'
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--config", help="specify config file, default: %s"
-                    % default_config_file, action="store", metavar="FILE", default=default_config_file)
+parser.add_argument("-c", "--config",
+                    help="specify config file, default: %s" % default_config_file,
+                    action="store",
+                    metavar="FILE",
+                    default=default_config_file)
 
 args = parser.parse_args()
 
@@ -62,9 +65,19 @@ else:
 def build_base_url(env=None):
     return "%s://%s" % (env['wsgi.url_scheme'], env['HTTP_HOST'])
 
-#TODO: make something better for the multiple call to build_base_url(env=request.environ)
 def usage(env=None):
-    return "Usage:\n\n\n  Upload a file:\ncurl -F file=@<file> %s\n\n  View all uploaded files:\ncurl %s/ls\n\n  Get infos about one file:\ncurl %s/<id>/infos\n\n  Get a file:\ncurl -JO %s/<id>\n\n\n" % (build_base_url(env=env), build_base_url(env=env), build_base_url(env=env), build_base_url(env=env))
+    if not 'base_url' in env:
+        env['base_url'] = build_base_url(env=env)
+
+    return ("Usage:\n\n\n  "
+            "Upload a file:\n"
+            "curl -F file=@<file> %(base_url)s\n\n  "
+            "View all uploaded files:\n"
+            "curl %(base_url)s/ls\n\n  "
+            "Get infos about one file:\n"
+            "curl %(base_url)s/<id>/infos\n\n  "
+            "Get a file:\n"
+            "curl -JO %(base_url)s/<id>\n\n\n") % env
 
 
 def human_readable(size):
@@ -144,6 +157,7 @@ def upload_file():
             os.rename(tmp_full_filename, storage_full_filename)
             LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
             return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
+    request.environ['base_url'] = build_base_url(env=request.environ)
     if 'curl' in request.headers.get('User-Agent'):
         return usage(env=request.environ)
     else:
@@ -159,14 +173,14 @@ def upload_file():
 
 
           View all uploaded files:<br>
-            %s/ls<br><br>
+            %(base_url)s/ls<br><br>
 
           Get infos about one file:<br>
-            %s/&#60;id&#62;/infos<br><br>
+            %(base_url)s/&#60;id&#62;/infos<br><br>
 
           Get a file:<br>
-            %s/&#60;id&#62;
-        ''' % (build_base_url(env=request.environ), build_base_url(env=request.environ), build_base_url(env=request.environ))
+            %(base_url)s/&#60;id&#62;
+        ''' % request.environ
 
 
 @app.route('/<id_file>/infos', methods=['GET'])
@@ -180,15 +194,15 @@ def get_file(id_file):
     with JsonDB(dbfile=app.config['file_list']) as db:
         if db.lock_error:
             return "Lock timed out"
-        if id_file in db.db:
-            filename = db.db[id_file]['storage_full_filename']
-            LOG.info("[GET] Client %s has requested: %s (%s)" % (request.remote_addr, os.path.basename(db.db[id_file]['real_full_filename']), id_file))
-            return send_from_directory(app.config['upload_folder'],
-                                       os.path.basename(filename),
-                                       attachment_filename=os.path.basename(db.db[id_file]['real_full_filename']),
-                                       as_attachment=True)
-        else:
+        if id_file not in db.db:
             return abort(404)
+
+        filename = db.db[id_file]['storage_full_filename']
+        LOG.info("[GET] Client %s has requested: %s (%s)" % (request.remote_addr, os.path.basename(db.db[id_file]['real_full_filename']), id_file))
+        return send_from_directory(app.config['upload_folder'],
+                                   os.path.basename(filename),
+                                   attachment_filename=os.path.basename(db.db[id_file]['real_full_filename']),
+                                   as_attachment=True)
 
 
 @app.route('/ls', methods=['GET'])
