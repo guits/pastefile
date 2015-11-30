@@ -23,6 +23,7 @@ class JsonDB(object):
 
     def __enter__(self):
         self._lock()
+        self.load()
         return self
 
     def __exit__(self, type, value, traceback):
@@ -38,7 +39,6 @@ class JsonDB(object):
         while True:
             try:
                 fcntl.flock(self._f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                self.load()
                 return True
             except IOError:
                 time.sleep(0.01)
@@ -52,7 +52,7 @@ class JsonDB(object):
 
     def load(self):
         try:
-            self.db = json.load(self._f)
+            self.db = json.load(open(self._dbfile, 'r'))
         except (IOError, AttributeError, ValueError) as e:
             self._logger.debug("Can't load file: %s" % e)
 
