@@ -1,2 +1,3 @@
 *.pyc
 pastefile.cfg
+*.py.swp

@@ -6,8 +6,6 @@ import time
 import hashlib
 import magic
 import datetime
-import ConfigParser
-import argparse
 import logging
 import tempfile
 from jsondb import JsonDB
@@ -15,58 +13,47 @@ from flask import Flask, request, send_from_directory, abort
 from flask import jsonify, render_template
 from werkzeug import secure_filename
 
-default_config_file = '/etc/pastefile.cfg'
-
-parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--config",
-                    help="specify config file, default: %s" % default_config_file,
-                    action="store",
-                    metavar="FILE",
-                    default=default_config_file)
-
-args = parser.parse_args()
-
-if not os.path.isfile(args.config):
-    print 'Error: config file %s not found' % args.config
-    exit(1)
-
-config = ConfigParser.ConfigParser()
-config.read(args.config)
-
 app = Flask(__name__)
-for section in config.sections():
-    for k, v in config.items(section):
-        app.config[k] = v
-
-LOG = logging.getLogger()
+LOG = logging.getLogger(app.config['LOGGER_NAME'])
 LOG.setLevel(logging.DEBUG)
-hdl_file = logging.FileHandler(filename=app.config['log'])
-hdl_file.setLevel(logging.DEBUG)
 hdl_stream = logging.StreamHandler()
 hdl_stream.setLevel(logging.INFO)
-formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-hdl_file.setFormatter(formatter_file)
 formatter_stream = logging.Formatter('%(message)s')
 hdl_stream.setFormatter(formatter_stream)
-LOG.addHandler(hdl_file)
 LOG.addHandler(hdl_stream)
 
-for app_dir in ['upload_folder', 'tmp_folder']:
-    if not os.path.exists(app.config[app_dir]):
-        os.makedirs(app.config[app_dir])
+try:
+    app.config.from_envvar('PASTEFILE_SETTINGS')
+except RuntimeError:
+    LOG.error('PASTEFILE_SETTINGS envvar is not set')
+    exit(1)
 
-if app.config['port'] == str(80):
-    app.config['base_url'] = "http://%s" % app.config['hostname']
-else:
-    app.config['base_url'] = "http://%s:%s" % (app.config['hostname'],
-                                               app.config['port'])
+hdl_file = logging.FileHandler(filename=app.config['LOG'])
+hdl_file.setLevel(logging.DEBUG)
+formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+hdl_file.setFormatter(formatter_file)
+LOG.addHandler(hdl_file)
+
+def init_app():
+    for app_dir in ['UPLOAD_FOLDER', 'TMP_FOLDER']:
+        if not os.path.exists(app.config[app_dir]):
+            os.makedirs(app.config[app_dir])
+
+# TODO: improve
+init_app()
+
+def config_app(config, _app):
+    for section in config.sections():
+        for k, v in config.items(section):
+            _app.config[k] = v
 
 
 def build_base_url(env=None):
     return "%s://%s" % (env['wsgi.url_scheme'], env['HTTP_HOST'])
 
+
 def usage(env=None):
-    if not 'base_url' in env:
+    if 'base_url' not in env:
         env['base_url'] = build_base_url(env=env)
 
     return ("Usage:\n\n\n  "
@@ -93,7 +80,7 @@ def get_md5(filename):
 
 
 def get_infos_file_from_md5(md5):
-    with JsonDB(dbfile=app.config['file_list']) as db:
+    with JsonDB(dbfile=app.config['FILE_LIST']) as db:
         if db.lock_error:
             return False
         return db.read(md5)
@@ -106,7 +93,7 @@ def clean_files(file_list):
             return False
         for k, v in db.db.iteritems():
             if int(db.db[k]['timestamp']) < int(time.time() -
-               int(app.config['expire'])):
+               int(app.config['EXPIRE'])):
                 db.delete(k)
                 os.remove(db.db[k]['storage_full_filename'])
 
@@ -119,7 +106,7 @@ def infos_file(id_file, env=None):
             'md5': id_file,
             'timestamp': infos['timestamp'],
             'expire': datetime.datetime.fromtimestamp(
-                int(infos['timestamp']) + int(app.config['expire'])).strftime(
+                int(infos['timestamp']) + int(app.config['EXPIRE'])).strftime(
                     '%d-%m-%Y %H:%M:%S'),
             'type': magic.from_file(infos['storage_full_filename']),
             'size': human_readable(os.stat(infos['storage_full_filename']).st_size),
@@ -128,27 +115,27 @@ def infos_file(id_file, env=None):
         return file_infos
     return False
 
-#TODO: make something better for the multiple call to build_base_url(env=request.environ)
+
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
-        clean_files(app.config['file_list'])
+        clean_files(app.config['FILE_LIST'])
         file = request.files['file']
         if file:
             filename = secure_filename(file.filename)
             fd, tmp_full_filename = tempfile.mkstemp(
-                prefix='processing-', dir=app.config['upload_folder'])
+                prefix='processing-', dir=app.config['UPLOAD_FOLDER'])
             os.close(fd)
             file.save(os.path.join(tmp_full_filename))
             file_md5 = get_md5(tmp_full_filename)
-            real_full_filename = os.path.join(app.config['upload_folder'], filename)
-            storage_full_filename = os.path.join(app.config['upload_folder'], file_md5)
-            with JsonDB(dbfile=app.config['file_list']) as db:
+            real_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], file_md5)
+            with JsonDB(dbfile=app.config['FILE_LIST']) as db:
                 if db.lock_error:
                     return "Lock timed out"
                 if file_md5 in db.db:
                     os.remove(tmp_full_filename)
-                    return "File already exists\n%s/%s" % (app.config['base_url'], file_md5)
+                    return "File already exists\n%s/%s\n" % (build_base_url(env=request.environ), file_md5)
                 db.write(file_md5, {
                     'real_full_filename': real_full_filename,
                     'storage_full_filename': storage_full_filename,
@@ -158,7 +145,7 @@ def upload_file():
             LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
             return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
     request.environ['base_url'] = build_base_url(env=request.environ)
-    if 'curl' in request.headers.get('User-Agent'):
+    if 'curl' in request.headers.get('User-Agent', []):
         return usage(env=request.environ)
     else:
         return '''
@@ -191,7 +178,7 @@ def infos(id_file):
 
 @app.route('/<id_file>', methods=['GET'])
 def get_file(id_file):
-    with JsonDB(dbfile=app.config['file_list']) as db:
+    with JsonDB(dbfile=app.config['FILE_LIST']) as db:
         if db.lock_error:
             return "Lock timed out"
         if id_file not in db.db:
@@ -199,7 +186,7 @@ def get_file(id_file):
 
         filename = db.db[id_file]['storage_full_filename']
         LOG.info("[GET] Client %s has requested: %s (%s)" % (request.remote_addr, os.path.basename(db.db[id_file]['real_full_filename']), id_file))
-        return send_from_directory(app.config['upload_folder'],
+        return send_from_directory(app.config['UPLOAD_FOLDER'],
                                    os.path.basename(filename),
                                    attachment_filename=os.path.basename(db.db[id_file]['real_full_filename']),
                                    as_attachment=True)
@@ -207,9 +194,9 @@ def get_file(id_file):
 
 @app.route('/ls', methods=['GET'])
 def ls():
-    clean_files(app.config['file_list'])
+    clean_files(app.config['FILE_LIST'])
     files_list_infos = {}
-    with JsonDB(dbfile=app.config['file_list']) as db:
+    with JsonDB(dbfile=app.config['FILE_LIST'], logger=app.config['LOGGER_NAME']) as db:
         if db.lock_error:
             return "Lock timed out"
         instant_db = db.db
@@ -224,6 +211,3 @@ def ls():
 def page_not_found(e):
     return render_template('404.html'), 404
 
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(app.config['port']), debug=True)
