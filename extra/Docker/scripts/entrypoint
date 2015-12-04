@@ -1,0 +1,13 @@
+#!/bin/sh
+
+[ -z $NGINX_WORKER_PROCESSES ] && export NGINX_WORKER_PROCESSES=auto
+[ -z $NGINX_WORKER_CONNECTIONS ] && export NGINX_WORKER_CONNECTIONS=1024
+[ -z $NGINX_KEEPALIVE_TIMEOUT ] && export NGINX_KEEPALIVE_TIMEOUT=1
+[ -z $NGINX_DEFAULT_PORT ] && export NGINX_DEFAULT_PORT=80
+[ -z $NGINX_APP_NAME ] && export NGINX_APP_NAME=pastefile
+[ -z $UWSGI_SOCK ] && export UWSGI_SOCK=/tmp/uwsgi.sock
+
+envsubst '$NGINX_WORKER_PROCESSES $NGINX_WORKER_CONNECTIONS $NGINX_KEEPALIVE_TIMEOUT' < /opt/pastefile/nginx.conf.template > /etc/nginx/nginx.conf
+envsubst '$NGINX_DEFAULT_PORT $NGINX_APP_NAME $UWSGI_SOCK' < /opt/pastefile/vhost.conf.template > /etc/nginx/conf.d/pastefile.conf
+uwsgi -s $UWSGI_SOCK -w app:app --chdir /var/www/pastefile/pastefile --uid 33 --gid 33 --env PASTEFILE_SETTINGS=/etc/pastefile.cfg --enable-threads --daemonize=/tmp/uwsgi-pastefile.log
+nginx -g "daemon off;"

@@ -17,4 +17,4 @@ def parse_args():
 if __name__ == '__main__':
     parse_args()
     from pastefile.app import app
-    app.run(host='0.0.0.0', port=int(app.config['PORT']), debug=True)
+    app.run(host='0.0.0.0', port=int(app.config['DEBUG_PORT']), debug=True)

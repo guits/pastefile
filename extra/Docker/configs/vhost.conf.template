@@ -1,0 +1,11 @@
+server {
+        listen ${NGINX_DEFAULT_PORT} default_server;
+
+
+        location / { try_files $uri @${NGINX_APP_NAME}; }
+
+        location @${NGINX_APP_NAME} {
+            include uwsgi_params;
+            uwsgi_pass unix://${UWSGI_SOCK};
+        }
+}
