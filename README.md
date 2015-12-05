@@ -153,13 +153,21 @@ this is the easiest way to get a pastefile application running quickly.
 
 # Usage
 Upload a file:
-```curl -F file=@ http://pastefile.fr```
+```bash
+curl -F file=@ http://pastefile.fr
+```
 
 View all uploaded files:
-```curl http://pastefile.fr/ls```
+```bash
+curl http://pastefile.fr/ls
+```
 
 Get infos about one file:
-```curl http://pastefile.fr//infos```
+```bash
+curl http://pastefile.fr/infos
+```
 
 Get a file:
-```curl -JO http://pastefile.fr/```
+```bash
+curl -JO http://pastefile.fr/
+```
