@@ -1,4 +1,3 @@
-HOSTNAME = "pastefile.fr"
 UPLOAD_FOLDER = "/opt/pydl/files/"
 FILE_LIST = "/opt/pydl/uploaded_files_jsondb"
 TMP_FOLDER = "/opt/pydl/tmp"
