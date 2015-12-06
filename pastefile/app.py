@@ -28,24 +28,21 @@ except RuntimeError:
     LOG.error('PASTEFILE_SETTINGS envvar is not set')
     exit(1)
 
+
+def init_app(_app=None):
+    for app_dir in ['UPLOAD_FOLDER', 'TMP_FOLDER']:
+        if not os.path.exists(_app.config[app_dir]):
+            os.makedirs(_app.config[app_dir])
+
+init_app(_app=app)
 hdl_file = logging.FileHandler(filename=app.config['LOG'])
 hdl_file.setLevel(logging.DEBUG)
-formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter_file = logging.Formatter('%(asctime)s -'
+                                   ' %(name)s - '
+                                   '%(levelname)s'
+                                   ' - %(message)s')
 hdl_file.setFormatter(formatter_file)
 LOG.addHandler(hdl_file)
-
-def init_app():
-    for app_dir in ['UPLOAD_FOLDER', 'TMP_FOLDER']:
-        if not os.path.exists(app.config[app_dir]):
-            os.makedirs(app.config[app_dir])
-
-# TODO: improve
-init_app()
-
-def config_app(config, _app):
-    for section in config.sections():
-        for k, v in config.items(section):
-            _app.config[k] = v
 
 
 def build_base_url(env=None):
@@ -109,7 +106,8 @@ def infos_file(id_file, env=None):
                 int(infos['timestamp']) + int(app.config['EXPIRE'])).strftime(
                     '%d-%m-%Y %H:%M:%S'),
             'type': magic.from_file(infos['storage_full_filename']),
-            'size': human_readable(os.stat(infos['storage_full_filename']).st_size),
+            'size': human_readable(os.stat(
+                                   infos['storage_full_filename']).st_size),
             'url': "%s/%s" % (build_base_url(env=env), id_file)
         }
         return file_infos
@@ -128,8 +126,10 @@ def upload_file():
             os.close(fd)
             file.save(os.path.join(tmp_full_filename))
             file_md5 = get_md5(tmp_full_filename)
-            real_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], file_md5)
+            real_full_filename = os.path.join(app.config['UPLOAD_FOLDER'],
+                                              filename)
+            storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'],
+                                                 file_md5)
             with JsonDB(dbfile=app.config['FILE_LIST']) as db:
                 if db.lock_error:
                     return "Lock timed out"
