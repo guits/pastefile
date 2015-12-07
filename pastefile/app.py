@@ -35,12 +35,6 @@ hdl_file.setFormatter(formatter_file)
 LOG.addHandler(hdl_file)
 
 
-def config_app(config, _app):
-    for section in config.sections():
-        for k, v in config.items(section):
-            _app.config[k] = v
-
-
 def build_base_url(env=None):
     return "%s://%s" % (env['wsgi.url_scheme'], env['HTTP_HOST'])
 
@@ -114,7 +108,6 @@ def upload_file():
     if request.method == 'POST':
         clean_files(app.config['FILE_LIST'])
         file = request.files['file']
-        print file
         if file:
             filename = secure_filename(file.filename)
             fd, tmp_full_filename = tempfile.mkstemp(
