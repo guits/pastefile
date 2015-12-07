@@ -34,13 +34,6 @@ formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(m
 hdl_file.setFormatter(formatter_file)
 LOG.addHandler(hdl_file)
 
-def init_app():
-    for app_dir in ['UPLOAD_FOLDER', 'TMP_FOLDER']:
-        if not os.path.exists(app.config[app_dir]):
-            os.makedirs(app.config[app_dir])
-
-# TODO: improve
-init_app()
 
 def config_app(config, _app):
     for section in config.sections():
@@ -121,27 +114,43 @@ def upload_file():
     if request.method == 'POST':
         clean_files(app.config['FILE_LIST'])
         file = request.files['file']
+        print file
         if file:
             filename = secure_filename(file.filename)
             fd, tmp_full_filename = tempfile.mkstemp(
                 prefix='processing-', dir=app.config['TMP_FOLDER'])
             os.close(fd)
-            file.save(os.path.join(tmp_full_filename))
+            try:
+                file.save(os.path.join(tmp_full_filename))
+            except IOError as e:
+                LOG.error("Can't save tmp file: %s" % e)
+                return "Server error, contact administrator"
             file_md5 = get_md5(tmp_full_filename)
             real_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], file_md5)
             with JsonDB(dbfile=app.config['FILE_LIST']) as db:
                 if db.lock_error:
+                    try:
+                        os.remove(tmp_full_filename)
+                    except OSError as e:
+                        LOG.error("Can't remove tmp file: %s" % e)
                     return "Lock timed out"
                 if file_md5 in db.db:
-                    os.remove(tmp_full_filename)
+                    try:
+                        os.remove(tmp_full_filename)
+                    except OSError as e:
+                        LOG.error("Can't remove tmp file: %s" % e)
                     return "File already exists\n%s/%s\n" % (build_base_url(env=request.environ), file_md5)
                 db.write(file_md5, {
                     'real_full_filename': real_full_filename,
                     'storage_full_filename': storage_full_filename,
                     'timestamp': int(time.time()),
                 })
-            os.rename(tmp_full_filename, storage_full_filename)
+            try:
+                os.rename(tmp_full_filename, storage_full_filename)
+            except OSError as e:
+                LOG.error("Can't move processing file to storage directory: %s" % e)
+                return "Server error, contact administrator"
             LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
             return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
     request.environ['base_url'] = build_base_url(env=request.environ)
