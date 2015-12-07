@@ -124,7 +124,7 @@ def upload_file():
         if file:
             filename = secure_filename(file.filename)
             fd, tmp_full_filename = tempfile.mkstemp(
-                prefix='processing-', dir=app.config['UPLOAD_FOLDER'])
+                prefix='processing-', dir=app.config['TMP_FOLDER'])
             os.close(fd)
             file.save(os.path.join(tmp_full_filename))
             file_md5 = get_md5(tmp_full_filename)
