@@ -28,19 +28,9 @@ except RuntimeError:
     LOG.error('PASTEFILE_SETTINGS envvar is not set')
     exit(1)
 
-
-def init_app(_app=None):
-    for app_dir in ['UPLOAD_FOLDER', 'TMP_FOLDER']:
-        if not os.path.exists(_app.config[app_dir]):
-            os.makedirs(_app.config[app_dir])
-
-init_app(_app=app)
 hdl_file = logging.FileHandler(filename=app.config['LOG'])
 hdl_file.setLevel(logging.DEBUG)
-formatter_file = logging.Formatter('%(asctime)s -'
-                                   ' %(name)s - '
-                                   '%(levelname)s'
-                                   ' - %(message)s')
+formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 hdl_file.setFormatter(formatter_file)
 LOG.addHandler(hdl_file)
 
@@ -106,8 +96,7 @@ def infos_file(id_file, env=None):
                 int(infos['timestamp']) + int(app.config['EXPIRE'])).strftime(
                     '%d-%m-%Y %H:%M:%S'),
             'type': magic.from_file(infos['storage_full_filename']),
-            'size': human_readable(os.stat(
-                                   infos['storage_full_filename']).st_size),
+            'size': human_readable(os.stat(infos['storage_full_filename']).st_size),
             'url': "%s/%s" % (build_base_url(env=env), id_file)
         }
         return file_infos
@@ -122,26 +111,35 @@ def upload_file():
         if file:
             filename = secure_filename(file.filename)
             fd, tmp_full_filename = tempfile.mkstemp(
-                prefix='processing-', dir=app.config['UPLOAD_FOLDER'])
+                prefix='processing-', dir=app.config['TMP_FOLDER'])
             os.close(fd)
-            file.save(os.path.join(tmp_full_filename))
+            try:
+                file.save(os.path.join(tmp_full_filename))
+            except IOError as e:
+                LOG.error("Can't save tmp file: %s" % e)
+                return "Server error, contact administrator"
             file_md5 = get_md5(tmp_full_filename)
-            real_full_filename = os.path.join(app.config['UPLOAD_FOLDER'],
-                                              filename)
-            storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'],
-                                                 file_md5)
+            real_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], file_md5)
             with JsonDB(dbfile=app.config['FILE_LIST']) as db:
-                if db.lock_error:
-                    return "Lock timed out"
-                if file_md5 in db.db:
-                    os.remove(tmp_full_filename)
-                    return "File already exists\n%s/%s\n" % (build_base_url(env=request.environ), file_md5)
+                if db.lock_error or file_md5 in db.db:
+                    try:
+                        os.remove(tmp_full_filename)
+                        if file_md5 in db.db:
+                            return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
+                    except OSError as e:
+                        LOG.error("Can't remove tmp file: %s" % e)
+                        return False
                 db.write(file_md5, {
                     'real_full_filename': real_full_filename,
                     'storage_full_filename': storage_full_filename,
                     'timestamp': int(time.time()),
                 })
-            os.rename(tmp_full_filename, storage_full_filename)
+            try:
+                os.rename(tmp_full_filename, storage_full_filename)
+            except OSError as e:
+                LOG.error("Can't move processing file to storage directory: %s" % e)
+                return "Server error, contact administrator"
             LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
             return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
     request.environ['base_url'] = build_base_url(env=request.environ)
