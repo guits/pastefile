@@ -122,30 +122,46 @@ def upload_file():
             real_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], file_md5)
             with JsonDB(dbfile=app.config['FILE_LIST']) as db:
+
+                # Just inform for debug purpose
                 if db.lock_error:
+                    LOG.error("Unable to get lock during file upload %s" % file_md5)
+
+                # If we can lock, add this file in pastefile
+                # tmpfile will be "removed" by rename
+                if file_md5 not in db.db and not db.lock_error:
+
+                    try:
+                        os.rename(tmp_full_filename, storage_full_filename)
+                    except OSError as e:
+                        LOG.error("Can't move processing file to storage directory: %s" % e)
+                        return "Server error, contact administrator"
+                    LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
+
+                    db.write(file_md5, {
+                        'real_full_filename': real_full_filename,
+                        'storage_full_filename': storage_full_filename,
+                        'timestamp': int(time.time()),
+                    })
+                else:
+                    # Remove tmp posted file in any case
                     try:
                         os.remove(tmp_full_filename)
                     except OSError as e:
                         LOG.error("Can't remove tmp file: %s" % e)
-                    return "Lock timed out"
-                if file_md5 in db.db:
-                    try:
-                        os.remove(tmp_full_filename)
-                    except OSError as e:
-                        LOG.error("Can't remove tmp file: %s" % e)
-                    return "File already exists\n%s/%s\n" % (build_base_url(env=request.environ), file_md5)
-                db.write(file_md5, {
-                    'real_full_filename': real_full_filename,
-                    'storage_full_filename': storage_full_filename,
-                    'timestamp': int(time.time()),
-                })
-            try:
-                os.rename(tmp_full_filename, storage_full_filename)
-            except OSError as e:
-                LOG.error("Can't move processing file to storage directory: %s" % e)
-                return "Server error, contact administrator"
-            LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
+                        return False
+
+                # In the case the file is not in db, we have 2 reason :
+                #  * We was not able to have the lock and write the file in the db.
+                #  * Or an error occure during the file processing
+                # In any case just tell the user to try later
+                if db.lock_error and file_md5 not in db.db:
+                    LOG.info('Unable lock the db and find the file %s in db during upload' % file_md5)
+                    return 'Unable to upload the file, try again later ...'
+
             return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
+
+    # request.method == 'GET'
     request.environ['base_url'] = build_base_url(env=request.environ)
     if 'curl' in request.headers.get('User-Agent', []):
         return usage(env=request.environ)
