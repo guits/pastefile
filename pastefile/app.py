@@ -81,8 +81,8 @@ def clean_files(file_list):
         for k, v in db.db.iteritems():
             if int(db.db[k]['timestamp']) < int(time.time() -
                int(app.config['EXPIRE'])):
-                db.delete(k)
                 os.remove(db.db[k]['storage_full_filename'])
+                db.delete(k)
 
 
 def infos_file(id_file, env=None):
