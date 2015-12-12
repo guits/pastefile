@@ -11,12 +11,10 @@ import pastefile.app as flaskr
 
 class FlaskrTestCase(unittest.TestCase):
 
-    @mock.patch('pastefile.app.os.path.exists')
-    @mock.patch('pastefile.app.os.path')
-    @mock.patch('pastefile.app.os')
+    @mock.patch('pastefile.app.JsonDB')
     @mock.patch('pastefile.app')
-    def setUp(self, mock, mock_os, mock_os_path, mock_os_path_exists):
-        mock_os_path_exists.exists.return_value = True
+    def setUp(self, mock, mock_app_jsondb):
+        mock_app_jsondb.exists.return_value = True
         flaskr.app.config['TESTING'] = True
         self.app = flaskr.app.test_client()
 
