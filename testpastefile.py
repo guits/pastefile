@@ -12,10 +12,10 @@ import pastefile.app as flaskr
 class FlaskrTestCase(unittest.TestCase):
 
     @mock.patch('pastefile.app.JsonDB')
-    @mock.patch('pastefile.app')
-    def setUp(self, mock, mock_app_jsondb):
-        mock_app_jsondb.exists.return_value = True
+    def setUp(self, mock_app_jsondb):
         flaskr.app.config['TESTING'] = True
+        self.jsondb = mock_app_jsondb
+        self.jsondb.
         self.app = flaskr.app.test_client()
 
     def tearDown(self):
