@@ -12,6 +12,8 @@ from jsondb import JsonDB
 from flask import Flask, request, send_from_directory, abort
 from flask import jsonify, render_template
 from werkzeug import secure_filename
+from functools import partial
+
 
 app = Flask(__name__)
 LOG = logging.getLogger(app.config['LOGGER_NAME'])
@@ -62,8 +64,12 @@ def human_readable(size):
     return "%.2f%s" % (size, 'Y')
 
 
-def get_md5(filename):
-    return hashlib.md5(open(filename, 'rb').read()).hexdigest()
+def get_md5(filename, chunksize=2**15, bufsize=-1):
+    m = hashlib.md5()
+    with open(filename, 'rb', bufsize) as f:
+        for chunk in iter(partial(f.read, chunksize), b''):
+            m.update(chunk)
+    return m.hexdigest()
 
 
 def get_infos_file_from_md5(md5):
