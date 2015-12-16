@@ -78,10 +78,13 @@ def clean_files(file_list):
         if db.lock_error:
             LOG.warning('Cant clean files')
             return False
-        for k, v in db.db.iteritems():
+        for k, v in list(db.db.iteritems()):
             if int(db.db[k]['timestamp']) < int(time.time() -
                int(app.config['EXPIRE'])):
-                os.remove(db.db[k]['storage_full_filename'])
+                try:
+                    os.remove(db.db[k]['storage_full_filename'])
+                except OSError:
+                    LOG.debug('Error while trying to remove %s' % db.db[k]['storage_full_filename'])
                 db.delete(k)
 
 
