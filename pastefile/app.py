@@ -87,12 +87,12 @@ def clean_files(file_list):
         for k, v in list(db.db.iteritems()):
             if int(db.db[k]['timestamp']) < int(time.time() -
                int(app.config['EXPIRE'])):
-                os.remove(db.db[k]['storage_full_filename'])
                 try:
                     os.remove(db.db[k]['storage_full_filename'])
                 except OSError:
-                    LOG.debug('Error while trying to remove %s' % db.db[k]['storage_full_filename'])
-                db.delete(k)
+                    LOG.critical('Error while trying to remove %s' % db.db[k]['storage_full_filename'])
+                if not os.path.isfile(db.db[k]['storage_full_filename']):
+                    db.delete(k)
 
 
 def infos_file(id_file, env=None):
