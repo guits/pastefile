@@ -84,7 +84,7 @@ def infos_file(id_file, env=None):
     infos = get_infos_file_from_md5(id_file)
     if infos:
         file_infos = {
-            'name': os.path.basename(infos['real_full_filename']),
+            'name': infos['real_name'],
             'md5': id_file,
             'timestamp': infos['timestamp'],
             'expire': datetime.datetime.fromtimestamp(
@@ -114,7 +114,6 @@ def upload_file():
                 LOG.error("Can't save tmp file: %s" % e)
                 return "Server error, contact administrator"
             file_md5 = get_md5(tmp_full_filename)
-            real_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], file_md5)
             with JsonDB(dbfile=app.config['FILE_LIST']) as db:
 
@@ -134,7 +133,7 @@ def upload_file():
                     LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
 
                     db.write(file_md5, {
-                        'real_full_filename': real_full_filename,
+                        'real_name': filename,
                         'storage_full_filename': storage_full_filename,
                         'timestamp': int(time.time()),
                     })
@@ -175,10 +174,10 @@ def get_file(id_file):
             return abort(404)
 
         filename = db.db[id_file]['storage_full_filename']
-        LOG.info("[GET] Client %s has requested: %s (%s)" % (request.remote_addr, os.path.basename(db.db[id_file]['real_full_filename']), id_file))
+        LOG.info("[GET] Client %s has requested: %s (%s)" % (request.remote_addr, db.db[id_file]['real_name'], id_file))
         return send_from_directory(app.config['UPLOAD_FOLDER'],
                                    os.path.basename(filename),
-                                   attachment_filename=os.path.basename(db.db[id_file]['real_full_filename']),
+                                   attachment_filename=db.db[id_file]['real_name'],
                                    as_attachment=True)
 
 
