@@ -6,9 +6,11 @@ Usage:
 {{ title }}
    # {{ command }}
 
-{% endfor %}
+{% endfor -%}
 
-{%- else -%}
+Source : https://github.com/guits/pastefile
+
+{% else -%}
 <!doctype html>
 <title>Pastefile</title>
 <h1>Upload new File</h1>
@@ -24,5 +26,6 @@ Usage:
 
 {% endfor %}
 
+Source : <a href="https://github.com/guits/pastefile">https://github.com/guits/pastefile</a>
 {%- endif -%}
 {% endblock %}
