@@ -13,9 +13,24 @@ Little daemon written with python flask for sharing any files quickly via http
 # Installation
 You can either install by yourself with nginx or apache and use a custom configuration for uwsgi or build a docker image with the Dockerfile provided.
 
+## Quick run for test purpose
+
+If you just want to test pastefile quickly, we provide `pastefile-run.py` script only for test purpose.
+
+```bash
+apt-get install git python-dev python-pip
+pip install -r https://raw.githubusercontent.com/guits/pastefile/master/requirements.txt
+git clone https://github.com/guits/pastefile.git
+cd pastefile && cp pastefile.cfg.sample pastefile.cfg
+# Modify pastefile.cfg config to adapt pastefile directories
+./pastefile-run.py -c $PWD/pastefile.cfg
+```
+
+
 ## Standard
 ```bash
-apt-get install git nginx-full python-setuptools python-dev gcc
+apt-get install git nginx-full python-pip python-dev
+pip install -r https://raw.githubusercontent.com/guits/pastefile/master/requirements.txt
 ```
 
 ```bash
