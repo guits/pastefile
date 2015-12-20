@@ -31,17 +31,18 @@ class FlaskrTestCase(unittest.TestCase):
     def test_ls(self):
         rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
         assert '200 OK' == rv.status
-        print "data2=%s" % rv.data
-        j = json.loads(rv.data)
-#        m = re.match('^\{.*\}$', rv.data)
-#        assert m
+        assert rv.data == '{}'
 
     def test_upload(self):
         rnd_str = os.urandom(1024)
-        test_md5 = flaskr.get_md5(StringIO(rnd_str))
-        rv = self.app.post('/', data={'file': (StringIO(rnd_str), 'test_pastefile_random.file'),})
-        print "data=%s\nstatus=%s\n\n" % (rv.data, rv.status)
-        print test_md5
+        with open('./tests/test_file', 'w+') as f:
+            f.writelines(rnd_str)
+        test_md5 = flaskr.get_md5('./tests/test_file')
+        with open('./tests/test_file', 'r') as f:
+            rv = self.app.post('/', data={'file': (f, 'test_pastefile_random.file'),})
+        assert rv.data == "http://localhost/%s\n" % (test_md5)
+        assert rv.status == '200 OK'
+        rv = self.app.get("/%s" % (test_md5), headers={'User-Agent': 'curl'})
 
 if __name__ == '__main__':
     unittest.main()
