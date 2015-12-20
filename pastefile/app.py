@@ -222,6 +222,9 @@ def get_file(id_file):
 
 @app.route('/ls', methods=['GET'])
 def ls():
+    if app.config['DISABLE_LS']:
+        LOG.info("[LS] Tried to call /ls but this url is disabled")
+        return 'Administrator disabled the /ls option.'
     clean_files(app.config['FILE_LIST'])
     files_list_infos = {}
     with JsonDB(dbfile=app.config['FILE_LIST'], logger=app.config['LOGGER_NAME']) as db:
