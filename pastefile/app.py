@@ -41,21 +41,6 @@ def build_base_url(env=None):
     return "%s://%s" % (env['wsgi.url_scheme'], env['HTTP_HOST'])
 
 
-def usage(env=None):
-    if 'base_url' not in env:
-        env['base_url'] = build_base_url(env=env)
-
-    return ("Usage:\n\n\n  "
-            "Upload a file:\n"
-            "curl -F file=@<file> %(base_url)s\n\n  "
-            "View all uploaded files:\n"
-            "curl %(base_url)s/ls\n\n  "
-            "Get infos about one file:\n"
-            "curl %(base_url)s/<id>/infos\n\n  "
-            "Get a file:\n"
-            "curl -JO %(base_url)s/<id>\n\n\n") % env
-
-
 def human_readable(size):
     for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
         if size < 1024.0:
@@ -171,31 +156,8 @@ def upload_file():
 
             return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
 
-    # request.method == 'GET'
-    request.environ['base_url'] = build_base_url(env=request.environ)
-    if 'curl' in request.headers.get('User-Agent', []):
-        return usage(env=request.environ)
-    else:
-        return '''
-        <!doctype html>
-        <title>Pastefile</title>
-        <h1>Upload new File</h1>
-        <form action="" method=post enctype=multipart/form-data>
-          <p><input type=file name=file>
-             <input type=submit value=Upload>
-        </form><br><br>
-        Usage:<br><br>
-
-
-          View all uploaded files:<br>
-            %(base_url)s/ls<br><br>
-
-          Get infos about one file:<br>
-            %(base_url)s/&#60;id&#62;/infos<br><br>
-
-          Get a file:<br>
-            %(base_url)s/&#60;id&#62;
-        ''' % request.environ
+    # In case no file, return help
+    return abort(404)
 
 
 @app.route('/<id_file>/infos', methods=['GET'])
@@ -240,4 +202,15 @@ def ls():
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('404.html'), 404
+    # request.method == 'GET'
+    base_url = build_base_url(env=request.environ)
+
+    helps = {
+      "Upload a file:": "curl -F file=@**filename** %s" % base_url,
+      "View all uploaded files:": "curl %s/ls" % base_url,
+      "Get infos about one file:": "curl %s/**file_id**/infos" % base_url,
+      "Get a file:": "curl -JO %s/**file_id**" % base_url,
+      }
+    context = {'user_agent': request.headers.get('User-Agent', ''),
+               'helps': helps}
+    return render_template('404.html', **context), 404
