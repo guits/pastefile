@@ -34,7 +34,7 @@ class FlaskrTestCase(unittest.TestCase):
         assert '200 OK' == rv.status
         assert rv.data == '{}'
 
-    def test_upload(self):
+    def test_upload_and_retrieve(self):
         rnd_str = os.urandom(1024)
         with open('./tests/test_file', 'w+') as f:
             f.writelines(rnd_str)
@@ -44,6 +44,7 @@ class FlaskrTestCase(unittest.TestCase):
         assert rv.data == "http://localhost/%s\n" % (test_md5)
         assert rv.status == '200 OK'
         rv = self.app.get("/%s" % (test_md5), headers={'User-Agent': 'curl'})
+        assert rv.status == '200 OK'
 
 if __name__ == '__main__':
     unittest.main()

@@ -174,10 +174,16 @@ def get_file(id_file):
         if id_file not in db.db:
             return abort(404)
 
-        filename = db.db[id_file]['storage_full_filename']
+        filename = os.path.basename(db.db[id_file]['storage_full_filename'])
         LOG.info("[GET] Client %s has requested: %s (%s)" % (request.remote_addr, db.db[id_file]['real_name'], id_file))
-        return send_from_directory(app.config['UPLOAD_FOLDER'],
-                                   os.path.basename(filename),
+
+        if not os.path.isabs(app.config['UPLOAD_FOLDER']):
+            path = "%s/%s" % (os.path.dirname(app.instance_path), app.config['UPLOAD_FOLDER'])
+        else:
+            path = app.config['UPLOAD_FOLDER']
+
+        return send_from_directory(path,
+                                   filename,
                                    attachment_filename=db.db[id_file]['real_name'],
                                    as_attachment=True)
 
