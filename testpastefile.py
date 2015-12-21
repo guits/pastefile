@@ -7,6 +7,7 @@ import json
 from StringIO import StringIO
 import shutil
 os.environ['PASTEFILE_SETTINGS'] = '../pastefile-test.cfg'
+os.environ['TESTING'] = 'TRUE'
 
 import pastefile.app as flaskr
 

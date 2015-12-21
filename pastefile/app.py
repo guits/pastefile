@@ -30,11 +30,12 @@ except RuntimeError:
     LOG.error('PASTEFILE_SETTINGS envvar is not set')
     exit(1)
 
-hdl_file = logging.FileHandler(filename=app.config['LOG'])
-hdl_file.setLevel(logging.DEBUG)
-formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-hdl_file.setFormatter(formatter_file)
-LOG.addHandler(hdl_file)
+if os.environ['TESTING'] != 'TRUE':
+    hdl_file = logging.FileHandler(filename=app.config['LOG'])
+    hdl_file.setLevel(logging.DEBUG)
+    formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    hdl_file.setFormatter(formatter_file)
+    LOG.addHandler(hdl_file)
 
 
 def build_base_url(env=None):
