@@ -1,5 +1,4 @@
 *.pyc
-pastefile.cfg
 *.py.swp
 .tox/
 pastefile.egg-info/
