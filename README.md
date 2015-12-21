@@ -1,4 +1,4 @@
-Pastefile
+Pastefile           [![Build Status](https://travis-ci.org/guits/pastefile.svg)](https://travis-ci.org/guits/pastefile)
 =========
 
 Little daemon written with python flask for sharing any files quickly via http
