@@ -4,7 +4,7 @@ python:
   - "2.7"
 #command to install dependencies
 install: 
-  - pip install -r requirements.txt
+  - pip install tox
 # command to run tests
 script:
   - tox -vvv -epy27 test_pastefile.py
