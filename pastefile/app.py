@@ -197,6 +197,24 @@ def get_file(id_file):
                                    as_attachment=True)
 
 
+@app.route('/delete/<id_file>', methods=['GET'])
+def delete_file(id_file):
+    with JsonDB(dbfile=app.config['FILE_LIST']) as db:
+        if db.lock_error:
+            return "Lock timed out\n"
+        if id_file not in db.db:
+            return abort(404)
+        try:
+            storage_full_filename = db.db[id_file]['storage_full_filename']
+            os.remove(storage_full_filename)
+            LOG.info("[DELETE] Client %s has deleted: %s (%s)" % (request.remote_addr, db.db[id_file]['real_name'], id_file))
+            db.delete(id_file)
+            return "File %s deleted\n" % id_file
+        except IOError as e:
+            LOG.critical("Can't remove file: %s" % e)
+            return "Error: %s\n" % e
+
+
 @app.route('/ls', methods=['GET'])
 def ls():
     if app.config['DISABLE_LS']:
