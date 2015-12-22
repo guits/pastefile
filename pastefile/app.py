@@ -102,71 +102,76 @@ def infos_file(id_file, env=None):
     return False
 
 
+def slash_post(request=None):
+    clean_files(app.config['FILE_LIST'])
+    value_burn_after_read = request.form.getlist('burn')
+    if value_burn_after_read:
+        burn_after_read = True
+    else:
+        burn_after_read = False
+    file = request.files['file']
+    if file:
+        filename = secure_filename(file.filename)
+        fd, tmp_full_filename = tempfile.mkstemp(
+            prefix='processing-', dir=app.config['TMP_FOLDER'])
+        os.close(fd)
+        try:
+            file.save(os.path.join(tmp_full_filename))
+        except IOError as e:
+            LOG.error("Can't save tmp file: %s" % e)
+            return "Server error, contact administrator"
+        file_md5 = get_md5(tmp_full_filename)
+        storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], file_md5)
+        with JsonDB(dbfile=app.config['FILE_LIST']) as db:
+
+            # Just inform for debug purpose
+            if db.lock_error:
+                LOG.error("Unable to get lock during file upload %s" % file_md5)
+
+            # If we can lock, add this file in pastefile
+            # tmpfile will be "removed" by rename
+            if file_md5 not in db.db and not db.lock_error:
+
+                try:
+                    os.rename(tmp_full_filename, storage_full_filename)
+                except OSError as e:
+                    LOG.error("Can't move processing file to storage directory: %s" % e)
+                    return "Server error, contact administrator"
+                LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
+
+                db.write(file_md5, {
+                    'real_name': filename,
+                    'storage_full_filename': storage_full_filename,
+                    'timestamp': int(time.time()),
+                    'burn_after_read': str(burn_after_read),
+                })
+            else:
+                # Remove tmp posted file in any case
+                try:
+                    os.remove(tmp_full_filename)
+                except OSError as e:
+                    LOG.error("Can't remove tmp file: %s" % e)
+                    return False
+
+            # In the case the file is not in db, we have 2 reason :
+            #  * We was not able to have the lock and write the file in the db.
+            #  * Or an error occure during the file processing
+            # In any case just tell the user to try later
+            if db.lock_error and file_md5 not in db.db:
+                LOG.info('Unable lock the db and find the file %s in db during upload' % file_md5)
+                return 'Unable to upload the file, try again later ...'
+
+        return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
+
+
+
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
-        clean_files(app.config['FILE_LIST'])
-        value_burn_after_read = request.form.getlist('burn')
-        if value_burn_after_read:
-            burn_after_read = True
-        else:
-            burn_after_read = False
-        file = request.files['file']
-        if file:
-            filename = secure_filename(file.filename)
-            fd, tmp_full_filename = tempfile.mkstemp(
-                prefix='processing-', dir=app.config['TMP_FOLDER'])
-            os.close(fd)
-            try:
-                file.save(os.path.join(tmp_full_filename))
-            except IOError as e:
-                LOG.error("Can't save tmp file: %s" % e)
-                return "Server error, contact administrator"
-            file_md5 = get_md5(tmp_full_filename)
-            storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], file_md5)
-            with JsonDB(dbfile=app.config['FILE_LIST']) as db:
-
-                # Just inform for debug purpose
-                if db.lock_error:
-                    LOG.error("Unable to get lock during file upload %s" % file_md5)
-
-                # If we can lock, add this file in pastefile
-                # tmpfile will be "removed" by rename
-                if file_md5 not in db.db and not db.lock_error:
-
-                    try:
-                        os.rename(tmp_full_filename, storage_full_filename)
-                    except OSError as e:
-                        LOG.error("Can't move processing file to storage directory: %s" % e)
-                        return "Server error, contact administrator"
-                    LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
-
-                    db.write(file_md5, {
-                        'real_name': filename,
-                        'storage_full_filename': storage_full_filename,
-                        'timestamp': int(time.time()),
-                        'burn_after_read': str(burn_after_read),
-                    })
-                else:
-                    # Remove tmp posted file in any case
-                    try:
-                        os.remove(tmp_full_filename)
-                    except OSError as e:
-                        LOG.error("Can't remove tmp file: %s" % e)
-                        return False
-
-                # In the case the file is not in db, we have 2 reason :
-                #  * We was not able to have the lock and write the file in the db.
-                #  * Or an error occure during the file processing
-                # In any case just tell the user to try later
-                if db.lock_error and file_md5 not in db.db:
-                    LOG.info('Unable lock the db and find the file %s in db during upload' % file_md5)
-                    return 'Unable to upload the file, try again later ...'
-
-            return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
-
-    # In case no file, return help
-    return abort(404)
+        return slash_post(request=request)
+    else:
+        # In case no file, return help
+        return abort(404)
 
 
 @app.route('/<id_file>/infos', methods=['GET'])
