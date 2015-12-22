@@ -44,13 +44,25 @@ class FlaskrTestCase(unittest.TestCase):
         rnd_str = os.urandom(1024)
         with open(osjoin(self.testdir, 'test_file'), 'w+') as f:
             f.writelines(rnd_str)
+            f.seek(0)
             rv = self.app.post('/', data={'file': (f, 'test_pastefile_random.file'),})
-
         rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
         self.assertEquals('200 OK', rv.status)
         # basic check if we have an array like {md5: {name: ...}}
-        for md5, infos in json.loads(rv.data).iteritems():
-                self.assertTrue('name' in infos)
+        filenames = [infos['name'] for md5, infos in json.loads(rv.data).iteritems()]
+        self.assertEquals(['test_pastefile_random.file'], filenames)
+
+        # Add one new file. Remove the first file from disk only in the last test
+        last_test_result = json.loads(rv.data).keys()
+        os.remove(osjoin(flaskr.app.config['UPLOAD_FOLDER'], last_test_result.pop()))
+        rnd_str = os.urandom(1024)
+        with open(osjoin(self.testdir, 'test_file_2'), 'w+') as f:
+            f.writelines(rnd_str)
+            f.seek(0)
+            rv = self.app.post('/', data={'file': (f, 'test_pastefile2_random.file'),})
+        rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
+        filenames = [infos['name'] for md5, infos in json.loads(rv.data).iteritems()]
+        self.assertEquals(['test_pastefile2_random.file'], filenames)
 
         # Try with ls disables
         flaskr.app.config['DISABLE_LS'] = True
