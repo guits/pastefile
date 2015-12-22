@@ -253,6 +253,7 @@ def page_not_found(e):
       "View all uploaded files:": "curl %s/ls" % base_url,
       "Get infos about one file:": "curl %s/**file_id**/infos" % base_url,
       "Get a file:": "curl -JO %s/**file_id**" % base_url,
+      "Delete a file:": "curl %s/delete/**id**" % base_url,
       }
     context = {'user_agent': request.headers.get('User-Agent', ''),
                'helps': helps}
