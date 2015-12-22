@@ -61,7 +61,7 @@ class FlaskrTestCase(unittest.TestCase):
         # Try with ls disables
         flaskr.app.config['DISABLE_LS'] = True
         rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
-        self.assertEquals(rv.data, 'Administrator disabled the /ls option.')
+        self.assertEquals(rv.data, 'Administrator disabled the /ls option.\n')
 
     def test_upload_and_retrieve(self):
         rnd_str = os.urandom(1024)

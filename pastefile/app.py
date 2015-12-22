@@ -123,7 +123,7 @@ def slash_post(request=None):
             file.save(os.path.join(tmp_full_filename))
         except IOError as e:
             LOG.error("Can't save tmp file: %s" % e)
-            return "Server error, contact administrator"
+            return "Server error, contact administrator\n"
         file_md5 = get_md5(tmp_full_filename)
         storage_full_filename = os.path.join(app.config['UPLOAD_FOLDER'], file_md5)
         with JsonDB(dbfile=app.config['FILE_LIST']) as db:
@@ -140,7 +140,7 @@ def slash_post(request=None):
                     os.rename(tmp_full_filename, storage_full_filename)
                 except OSError as e:
                     LOG.error("Can't move processing file to storage directory: %s" % e)
-                    return "Server error, contact administrator"
+                    return "Server error, contact administrator\n"
                 LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
 
                 db.write(file_md5, {
@@ -163,7 +163,7 @@ def slash_post(request=None):
             # In any case just tell the user to try later
             if db.lock_error and file_md5 not in db.db:
                 LOG.info('Unable lock the db and find the file %s in db during upload' % file_md5)
-                return 'Unable to upload the file, try again later ...'
+                return 'Unable to upload the file, try again later ...\n'
 
         return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
 
@@ -188,7 +188,7 @@ def infos(id_file):
 def get_file(id_file):
     with JsonDB(dbfile=app.config['FILE_LIST']) as db:
         if db.lock_error:
-            return "Lock timed out"
+            return "Lock timed out\n"
         if id_file not in db.db:
             return abort(404)
 
@@ -228,12 +228,13 @@ def delete_file(id_file):
 def ls():
     if app.config['DISABLE_LS']:
         LOG.info("[LS] Tried to call /ls but this url is disabled")
-        return 'Administrator disabled the /ls option.'
+        return 'Administrator disabled the /ls option.\n'
+
     clean_files(app.config['FILE_LIST'])
     files_list_infos = {}
     with JsonDB(dbfile=app.config['FILE_LIST'], logger=app.config['LOGGER_NAME']) as db:
         if db.lock_error:
-            return "Lock timed out"
+            return "Lock timed out\n"
         instant_db = db.db
     for k, v in instant_db.iteritems():
         if not infos_file(k, env=request.environ):
