@@ -35,9 +35,27 @@ class FlaskrTestCase(unittest.TestCase):
         assert 'Get infos about one file' in rv.data
 
     def test_ls(self):
+        # Test ls without files
         rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
-        assert '200 OK' == rv.status
-        assert rv.data == '{}'
+        self.assertEquals('200 OK', rv.status)
+        self.assertEquals(json.loads(rv.data), {})
+
+        # With one posted file
+        rnd_str = os.urandom(1024)
+        with open(osjoin(self.testdir, 'test_file'), 'w+') as f:
+            f.writelines(rnd_str)
+            rv = self.app.post('/', data={'file': (f, 'test_pastefile_random.file'),})
+
+        rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
+        self.assertEquals('200 OK', rv.status)
+        # basic check if we have an array like {md5: {name: ...}}
+        for md5, infos in json.loads(rv.data).iteritems():
+                self.assertTrue('name' in infos)
+
+        # Try with ls disables
+        flaskr.app.config['DISABLE_LS'] = True
+        rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
+        self.assertEquals(rv.data, 'Administrator disabled the /ls option.')
 
     def test_upload_and_retrieve(self):
         rnd_str = os.urandom(1024)
