@@ -186,3 +186,8 @@ Get a file:
 ```bash
 curl -JO http://pastefile.fr/<id>
 ```
+
+Delete a file:
+```bash
+curl http://pastefile.fr/delete/<id>
+```
