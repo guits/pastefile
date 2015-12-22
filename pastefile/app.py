@@ -89,6 +89,7 @@ def infos_file(id_file, env=None):
         file_infos = {
             'name': infos['real_name'],
             'md5': id_file,
+            'burn_after_read': infos['burn_after_read'],
             'timestamp': infos['timestamp'],
             'expire': datetime.datetime.fromtimestamp(
                 int(infos['timestamp']) + int(app.config['EXPIRE'])).strftime(
@@ -105,6 +106,11 @@ def infos_file(id_file, env=None):
 def upload_file():
     if request.method == 'POST':
         clean_files(app.config['FILE_LIST'])
+        value_burn_after_read = request.form.getlist('burn')
+        if value_burn_after_read:
+            burn_after_read = True
+        else:
+            burn_after_read = False
         file = request.files['file']
         if file:
             filename = secure_filename(file.filename)
@@ -139,6 +145,7 @@ def upload_file():
                         'real_name': filename,
                         'storage_full_filename': storage_full_filename,
                         'timestamp': int(time.time()),
+                        'burn_after_read': str(burn_after_read),
                     })
                 else:
                     # Remove tmp posted file in any case
