@@ -85,7 +85,9 @@ def clean_files(file_list):
 
 def infos_file(id_file, env=None):
     infos = get_infos_file_from_md5(id_file)
-    if infos:
+    if not infos:
+       return False
+    try:
         file_infos = {
             'name': infos['real_name'],
             'md5': id_file,
@@ -99,7 +101,9 @@ def infos_file(id_file, env=None):
             'url': "%s/%s" % (build_base_url(env=env), id_file)
         }
         return file_infos
-    return False
+    except:
+        LOG.error('Unable to gather infos for file %s' % id_file)
+        return False
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -228,7 +232,7 @@ def ls():
         instant_db = db.db
     for k, v in instant_db.iteritems():
         if not infos_file(k, env=request.environ):
-            return abort(500)
+            continue
         files_list_infos[k] = infos_file(k, env=request.environ)
     return jsonify(files_list_infos)
 
