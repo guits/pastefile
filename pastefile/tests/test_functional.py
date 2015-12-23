@@ -64,16 +64,13 @@ class FlaskrTestCase(unittest.TestCase):
         self.assertEquals(rv.data, 'Administrator disabled the /ls option.\n')
 
     def test_upload_and_retrieve(self):
-        rnd_str = os.urandom(1024)
-        with open(osjoin(self.testdir, 'test_file'), 'w+') as f:
-            f.writelines(rnd_str)
-        test_md5 = flaskr.get_md5(osjoin(self.testdir, 'test_file'))
-        with open(osjoin(self.testdir, 'test_file'), 'r') as f:
-            rv = self.app.post('/', data={'file': (f, 'test_pastefile_random.file'),})
-        assert rv.data == "http://localhost/%s\n" % (test_md5)
-        assert rv.status == '200 OK'
+        _file = osjoin(self.testdir, 'test_file')
+        test_md5 = write_random_file(_file)
+        rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
+        self.assertEquals(rv.data, "http://localhost/%s\n" % (test_md5))
+        self.assertEquals(rv.status, '200 OK')
         rv = self.app.get("/%s" % (test_md5), headers={'User-Agent': 'curl'})
-        assert rv.status == '200 OK'
+        self.assertEquals(rv.status, '200 OK')
 
 if __name__ == '__main__':
     unittest.main()
