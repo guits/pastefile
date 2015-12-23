@@ -133,16 +133,16 @@ def delete_file(request, id_file, dbfile):
             return "Lock timed out\n"
         if id_file not in db.db:
             return abort(404)
-    try:
-        storage_full_filename = db.db[id_file]['storage_full_filename']
-        os.remove(storage_full_filename)
-        LOG.info("[DELETE] Client %s has deleted: %s (%s)"
-                 % (request.remote_addr, db.db[id_file]['real_name'], id_file))
-        db.delete(id_file)
-        return "File %s deleted\n" % id_file
-    except IOError as e:
-        LOG.critical("Can't remove file: %s" % e)
-        return "Error: %s\n" % e
+        try:
+            storage_full_filename = db.db[id_file]['storage_full_filename']
+            os.remove(storage_full_filename)
+            LOG.info("[DELETE] Client %s has deleted: %s (%s)"
+                     % (request.remote_addr, db.db[id_file]['real_name'], id_file))
+            db.delete(id_file)
+            return "File %s deleted\n" % id_file
+        except IOError as e:
+            LOG.critical("Can't remove file: %s" % e)
+            return "Error: %s\n" % e
 
 
 def get_file(request, id_file, config):
