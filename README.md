@@ -189,5 +189,5 @@ curl -JO http://pastefile.fr/<id>
 
 Delete a file:
 ```bash
-curl http://pastefile.fr/delete/<id>
+curl -XDELETE http://pastefile.fr/<id>
 ```
