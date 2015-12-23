@@ -77,9 +77,21 @@ class FlaskrTestCase(unittest.TestCase):
         rv = self.app.get("/%s" % (test_md5), headers={'User-Agent': 'curl'})
         self.assertEquals(rv.status, '200 OK')
 
-        # TODO
         # Try to re upload the same file. Should return same url
+        rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
+        self.assertEquals(rv.data, "http://localhost/%s\n" % (test_md5))
+
         # Try to upload a second file with the same filename. Both file should still available
+        _file_bis = osjoin(self.testdir, 'test_file')
+        test_md5_bis = write_random_file(_file_bis)
+        rv = self.app.post('/', data={'file': (open(_file_bis, 'r'), 'test_pastefile_random.file'),})
+        self.assertEquals(rv.data, "http://localhost/%s\n" % (test_md5_bis))
+
+        db_content = json.load(open(flaskr.app.config['FILE_LIST']))
+        md5s = sorted([md5 for md5 in db_content.keys()])
+        self.assertEquals(sorted([test_md5, test_md5_bis]), md5s)
+
+        # TODO
         # optionnal : if we lock the database, post should NOT work
         # optionnal : if we lock the database, get should work
 
