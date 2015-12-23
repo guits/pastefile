@@ -5,7 +5,7 @@ import os
 import logging
 from jsondb import JsonDB
 from flask import Flask, request, abort
-from flask import jsonify, render_template
+from flask import render_template
 from pastefile import utils
 from pastefile import controller
 
@@ -74,20 +74,8 @@ def list_all_files():
 
     controller.clean_files(dbfile=app.config['FILE_LIST'],
                            expire=app.config['EXPIRE'])
-    files_list_infos = {}
-    with JsonDB(dbfile=app.config['FILE_LIST'],
-                logger=app.config['LOGGER_NAME']) as db:
-        if db.lock_error:
-            return "Lock timed out\n"
-        instant_db = db.db
-    for k, v in instant_db.iteritems():
-        _infos = controller.get_file_info(id_file=k,
-                                          config=app.config,
-                                          env=request.environ)
-        if not _infos:
-            continue
-        files_list_infos[k] = _infos
-    return jsonify(files_list_infos)
+
+    return controller.get_all_files(request=request, config=app.config)
 
 
 @app.errorhandler(404)
