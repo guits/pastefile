@@ -14,6 +14,7 @@ from pastefile import utils
 
 LOG = logging.getLogger(__name__)
 
+
 def get_infos_file_from_md5(md5, dbfile):
     with JsonDB(dbfile=dbfile) as db:
         if db.lock_error:
@@ -32,7 +33,8 @@ def clean_files(dbfile, expire=86400):
                 try:
                     os.remove(db.db[k]['storage_full_filename'])
                 except OSError:
-                    LOG.critical('Error while trying to remove %s' % db.db[k]['storage_full_filename'])
+                    LOG.critical('Error while trying to remove %s'
+                                 % db.db[k]['storage_full_filename'])
                 if not os.path.isfile(db.db[k]['storage_full_filename']):
                     db.delete(k)
 
@@ -42,16 +44,18 @@ def infos_file(id_file, config, env=None):
     if not infos:
         return False
     try:
+        size = utils.human_readable(os.stat(infos['storage_full_filename']).st_size)
+        expire = datetime.datetime.fromtimestamp(
+                      int(infos['timestamp']) +
+                      int(config['EXPIRE'])).strftime('%d-%m-%Y %H:%M:%S'),
         file_infos = {
             'name': infos['real_name'],
             'md5': id_file,
             'burn_after_read': infos['burn_after_read'],
             'timestamp': infos['timestamp'],
-            'expire': datetime.datetime.fromtimestamp(
-                int(infos['timestamp']) + int(config['EXPIRE'])).strftime(
-                    '%d-%m-%Y %H:%M:%S'),
+            'expire': expire,
             'type': magic.from_file(infos['storage_full_filename']),
-            'size': utils.human_readable(os.stat(infos['storage_full_filename']).st_size),
+            'size': size,
             'url': "%s/%s" % (utils.build_base_url(env=env), id_file)
         }
         return file_infos
@@ -61,7 +65,6 @@ def infos_file(id_file, config, env=None):
 
 
 def slash_post(request, config):
-    clean_files(dbfile=config['FILE_LIST'], expire=config['EXPIRE'])
     value_burn_after_read = request.form.getlist('burn')
     if value_burn_after_read:
         burn_after_read = True
@@ -70,8 +73,8 @@ def slash_post(request, config):
     file = request.files['file']
     if file:
         filename = secure_filename(file.filename)
-        fd, tmp_full_filename = tempfile.mkstemp(
-            prefix='processing-', dir=config['TMP_FOLDER'])
+        fd, tmp_full_filename = tempfile.mkstemp(prefix='processing-',
+                                                 dir=config['TMP_FOLDER'])
         os.close(fd)
         try:
             file.save(os.path.join(tmp_full_filename))
@@ -95,7 +98,8 @@ def slash_post(request, config):
                 except OSError as e:
                     LOG.error("Can't move processing file to storage directory: %s" % e)
                     return "Server error, contact administrator\n"
-                LOG.info("[POST] Client %s has successfully uploaded: %s (%s)" % (request.remote_addr, filename, file_md5))
+                LOG.info("[POST] Client %s has successfully uploaded: %s (%s)"
+                         % (request.remote_addr, filename, file_md5))
 
                 db.write(file_md5, {
                     'real_name': filename,
@@ -119,7 +123,8 @@ def slash_post(request, config):
                 LOG.info('Unable lock the db and find the file %s in db during upload' % file_md5)
                 return 'Unable to upload the file, try again later ...\n'
 
-        return "%s/%s\n" % (utils.build_base_url(env=request.environ), file_md5)
+        return "%s/%s\n" % (utils.build_base_url(env=request.environ),
+                            file_md5)
 
 
 def slash_delete(request, id_file, dbfile):
@@ -131,12 +136,14 @@ def slash_delete(request, id_file, dbfile):
     try:
         storage_full_filename = db.db[id_file]['storage_full_filename']
         os.remove(storage_full_filename)
-        LOG.info("[DELETE] Client %s has deleted: %s (%s)" % (request.remote_addr, db.db[id_file]['real_name'], id_file))
+        LOG.info("[DELETE] Client %s has deleted: %s (%s)"
+                 % (request.remote_addr, db.db[id_file]['real_name'], id_file))
         db.delete(id_file)
         return "File %s deleted\n" % id_file
     except IOError as e:
         LOG.critical("Can't remove file: %s" % e)
         return "Error: %s\n" % e
+
 
 def slash_get(request, id_file, config):
     with JsonDB(dbfile=config['FILE_LIST']) as db:
@@ -146,10 +153,12 @@ def slash_get(request, id_file, config):
             return abort(404)
 
         filename = os.path.basename(db.db[id_file]['storage_full_filename'])
-        LOG.info("[GET] Client %s has requested: %s (%s)" % (request.remote_addr, db.db[id_file]['real_name'], id_file))
+        LOG.info("[GET] Client %s has requested: %s (%s)"
+                 % (request.remote_addr, db.db[id_file]['real_name'], id_file))
 
         if not os.path.isabs(config['UPLOAD_FOLDER']):
-            path = "%s/%s" % (os.path.dirname(config['instance_path']), config['UPLOAD_FOLDER'])
+            path = "%s/%s" % (os.path.dirname(config['instance_path']),
+                              config['UPLOAD_FOLDER'])
         else:
             path = config['UPLOAD_FOLDER']
 

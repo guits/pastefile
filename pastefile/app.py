@@ -40,6 +40,8 @@ except KeyError:
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
+        controller.clean_files(dbfile=app.config['FILE_LIST'],
+                               expire=app.config['EXPIRE'])
         return controller.slash_post(request=request, config=app.config)
     else:
         # In case no file, return help
@@ -70,9 +72,11 @@ def ls():
         LOG.info("[LS] Tried to call /ls but this url is disabled")
         return 'Administrator disabled the /ls option.\n'
 
-    controller.clean_files(dbfile=app.config['FILE_LIST'], expire=app.config['EXPIRE'])
+    controller.clean_files(dbfile=app.config['FILE_LIST'],
+                           expire=app.config['EXPIRE'])
     files_list_infos = {}
-    with JsonDB(dbfile=app.config['FILE_LIST'], logger=app.config['LOGGER_NAME']) as db:
+    with JsonDB(dbfile=app.config['FILE_LIST'],
+                logger=app.config['LOGGER_NAME']) as db:
         if db.lock_error:
             return "Lock timed out\n"
         instant_db = db.db
