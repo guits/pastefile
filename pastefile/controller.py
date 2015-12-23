@@ -39,7 +39,7 @@ def clean_files(dbfile, expire=86400):
                     db.delete(k)
 
 
-def infos_file(id_file, config, env=None):
+def get_file_info(id_file, config, env=None):
     infos = get_infos_file_from_md5(md5=id_file, dbfile=config['FILE_LIST'])
     if not infos:
         return False
@@ -64,7 +64,7 @@ def infos_file(id_file, config, env=None):
         return False
 
 
-def slash_post(request, config):
+def upload_file(request, config):
     value_burn_after_read = request.form.getlist('burn')
     if value_burn_after_read:
         burn_after_read = True
@@ -127,7 +127,7 @@ def slash_post(request, config):
                             file_md5)
 
 
-def slash_delete(request, id_file, dbfile):
+def delete_file(request, id_file, dbfile):
     with JsonDB(dbfile=dbfile) as db:
         if db.lock_error:
             return "Lock timed out\n"
@@ -145,7 +145,7 @@ def slash_delete(request, id_file, dbfile):
         return "Error: %s\n" % e
 
 
-def slash_get(request, id_file, config):
+def get_file(request, id_file, config):
     with JsonDB(dbfile=config['FILE_LIST']) as db:
         if db.lock_error:
             return "Lock timed out\n"

@@ -42,32 +42,32 @@ def upload_file():
     if request.method == 'POST':
         controller.clean_files(dbfile=app.config['FILE_LIST'],
                                expire=app.config['EXPIRE'])
-        return controller.slash_post(request=request, config=app.config)
+        return controller.upload_file(request=request, config=app.config)
     else:
         # In case no file, return help
         return abort(404)
 
 
 @app.route('/<id_file>/infos', methods=['GET'])
-def infos(id_file):
-    file_infos = controller.infos_file(id_file, env=request.environ)
+def display_file_infos(id_file):
+    file_infos = controller.get_file_info(id_file, env=request.environ)
     return jsonify(file_infos)
 
 
 @app.route('/<id_file>', methods=['GET', 'DELETE'])
-def slash(id_file):
+def get_or_delete_file(id_file):
     if request.method == 'GET':
-        return controller.slash_get(request=request,
-                                    id_file=id_file,
-                                    config=app.config)
+        return controller.get_file(request=request,
+                                   id_file=id_file,
+                                   config=app.config)
     if request.method == 'DELETE':
-        return controller.slash_delete(request=request,
-                                       id_file=id_file,
-                                       dbfile=app.config['FILE_LIST'])
+        return controller.delete_file(request=request,
+                                      id_file=id_file,
+                                      dbfile=app.config['FILE_LIST'])
 
 
 @app.route('/ls', methods=['GET'])
-def ls():
+def list_all_files():
     if app.config['DISABLE_LS']:
         LOG.info("[LS] Tried to call /ls but this url is disabled")
         return 'Administrator disabled the /ls option.\n'
@@ -81,9 +81,9 @@ def ls():
             return "Lock timed out\n"
         instant_db = db.db
     for k, v in instant_db.iteritems():
-        _infos = controller.infos_file(id_file=k,
-                                       config=app.config,
-                                       env=request.environ)
+        _infos = controller.get_file_info(id_file=k,
+                                          config=app.config,
+                                          env=request.environ)
         if not _infos:
             continue
         files_list_infos[k] = _infos
