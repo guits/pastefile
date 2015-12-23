@@ -10,6 +10,7 @@ os.environ['TESTING'] = 'TRUE'
 
 import pastefile.app as flaskr
 from pastefile.tests.tools import write_random_file
+from pastefile import utils
 
 
 class FlaskrTestCase(unittest.TestCase):

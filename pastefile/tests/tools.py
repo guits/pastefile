@@ -2,6 +2,7 @@
 
 import os
 import pastefile.app as flaskr
+from pastefile import utils
 
 
 def write_random_file(filename):
@@ -9,4 +10,4 @@ def write_random_file(filename):
     rnd_str = os.urandom(1024)
     with open(filename, 'w+') as f:
         f.writelines(rnd_str)
-    return flaskr.get_md5(filename)
+    return utils.get_md5(filename)
