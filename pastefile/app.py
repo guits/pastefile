@@ -3,8 +3,7 @@
 
 import os
 import logging
-from jsondb import JsonDB
-from flask import Flask, request, abort
+from flask import Flask, request, abort, jsonify
 from flask import render_template
 from pastefile import utils
 from pastefile import controller
@@ -51,6 +50,8 @@ def upload_file():
 @app.route('/<id_file>/infos', methods=['GET'])
 def display_file_infos(id_file):
     file_infos = controller.get_file_info(id_file, env=request.environ)
+    if not file_infos:
+        return abort(404)
     return jsonify(file_infos)
 
 
@@ -75,7 +76,7 @@ def list_all_files():
     controller.clean_files(dbfile=app.config['FILE_LIST'],
                            expire=app.config['EXPIRE'])
 
-    return controller.get_all_files(request=request, config=app.config)
+    return jsonify(controller.get_all_files(request=request, config=app.config))
 
 
 @app.errorhandler(404)

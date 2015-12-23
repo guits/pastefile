@@ -8,7 +8,7 @@ import datetime
 import tempfile
 import logging
 from jsondb import JsonDB
-from flask import send_from_directory, abort, jsonify
+from flask import send_from_directory, abort
 from werkzeug import secure_filename
 from pastefile import utils
 
@@ -182,4 +182,4 @@ def get_all_files(request, config):
         if not _infos:
             continue
         files_list_infos[k] = _infos
-    return jsonify(files_list_infos)
+    return files_list_infos
