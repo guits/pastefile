@@ -168,24 +168,24 @@ def slash_post(request=None):
         return "%s/%s\n" % (build_base_url(env=request.environ), file_md5)
 
 
+def slash_delete(request=None, id_file=None):
+    with JsonDB(dbfile=app.config['FILE_LIST']) as db:
+        if db.lock_error:
+            return "Lock timed out\n"
+        if id_file not in db.db:
+            return abort(404)
+    try:
+        storage_full_filename = db.db[id_file]['storage_full_filename']
+        os.remove(storage_full_filename)
+        LOG.info("[DELETE] Client %s has deleted: %s (%s)" % (request.remote_addr, db.db[id_file]['real_name'], id_file))
+        db.delete(id_file)
+        return "File %s deleted\n" % id_file
+    except IOError as e:
+        LOG.critical("Can't remove file: %s" % e)
+        return "Error: %s\n" % e
 
-@app.route('/', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        return slash_post(request=request)
-    else:
-        # In case no file, return help
-        return abort(404)
 
-
-@app.route('/<id_file>/infos', methods=['GET'])
-def infos(id_file):
-    file_infos = infos_file(id_file, env=request.environ)
-    return jsonify(file_infos)
-
-
-@app.route('/<id_file>', methods=['GET'])
-def get_file(id_file):
+def slash_get(request=None, id_file=None):
     with JsonDB(dbfile=app.config['FILE_LIST']) as db:
         if db.lock_error:
             return "Lock timed out\n"
@@ -206,22 +206,27 @@ def get_file(id_file):
                                    as_attachment=True)
 
 
-@app.route('/delete/<id_file>', methods=['GET'])
-def delete_file(id_file):
-    with JsonDB(dbfile=app.config['FILE_LIST']) as db:
-        if db.lock_error:
-            return "Lock timed out\n"
-        if id_file not in db.db:
-            return abort(404)
-        try:
-            storage_full_filename = db.db[id_file]['storage_full_filename']
-            os.remove(storage_full_filename)
-            LOG.info("[DELETE] Client %s has deleted: %s (%s)" % (request.remote_addr, db.db[id_file]['real_name'], id_file))
-            db.delete(id_file)
-            return "File %s deleted\n" % id_file
-        except IOError as e:
-            LOG.critical("Can't remove file: %s" % e)
-            return "Error: %s\n" % e
+@app.route('/', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        return slash_post(request=request)
+    else:
+        # In case no file, return help
+        return abort(404)
+
+
+@app.route('/<id_file>/infos', methods=['GET'])
+def infos(id_file):
+    file_infos = infos_file(id_file, env=request.environ)
+    return jsonify(file_infos)
+
+
+@app.route('/<id_file>', methods=['GET', 'DELETE'])
+def slash(id_file):
+    if request.method == 'GET':
+        return slash_get(request=request, id_file=id_file)
+    if request.method == 'DELETE':
+        return slash_delete(request=request, id_file=id_file)
 
 
 @app.route('/ls', methods=['GET'])
