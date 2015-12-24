@@ -22,7 +22,8 @@ class JsonDB(object):
         self.lock_error = False
 
     def __enter__(self):
-        self._lock()
+        if not self._lock():
+            self.lock_error = True
         self.load()
         return self
 
@@ -39,8 +40,7 @@ class JsonDB(object):
             self._f = open(self._dbfile, 'a')
         except IOError as e:
             self._logger.error('Error opening db file: %s' % e)
-            self.lock_error = True
-            return None
+            return False
         while True:
             try:
                 fcntl.flock(self._f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -48,9 +48,9 @@ class JsonDB(object):
             except IOError:
                 time.sleep(0.01)
                 if timeout(timeout=self._timeout, start=self._start):
-                    self.lock_error = True
                     self._logger.critical('Unable to lock')
-                    break
+                    self._f.close()
+                    return False
 
     def _release(self):
         self._f.close()
