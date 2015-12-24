@@ -22,6 +22,7 @@ class FlaskrTestCase(unittest.TestCase):
         if os.path.isdir(self.testdir):
             shutil.rmtree(self.testdir)
 
+
     def setUp(self):
         self.testdir = './tests'
         flaskr.app.config['TESTING'] = True
@@ -30,12 +31,15 @@ class FlaskrTestCase(unittest.TestCase):
         os.makedirs(osjoin(self.testdir, 'tmp'))
         self.app = flaskr.app.test_client()
 
+
     def tearDown(self):
         self.clean_dir()
+
 
     def test_slash(self):
         rv = self.app.get('/', headers={'User-Agent': 'curl'})
         assert 'Get infos about one file' in rv.get_data()
+
 
     def test_ls(self):
         # Test ls without files
@@ -133,12 +137,6 @@ class FlaskrTestCase(unittest.TestCase):
         # optionnal : if we lock the database, should NOT work
         pass
 
-    def test_burn_after_read(self):
-        # TODO
-        # Try to upload a file and get it one time.
-        # Try to get the file a second time, it should NOT work
-        # optionnal : if we lock the database, should NOT work
-        pass
 
     def test_clean_files(self):
         # Try to upload 2 file and force one to expire in the db.
@@ -178,6 +176,13 @@ class FlaskrTestCase(unittest.TestCase):
             self.assertFalse(file2_md5 in db.db.keys())
 
 
+    def test_burn_after_read(self):
+        # TODO
+        # Try to upload a file and get it one time.
+        # Try to get the file a second time, it should NOT work
+        # optionnal : if we lock the database, should NOT work
+        pass
+
 
     def test_check_db_consistency(self):
         # This feature is not yet implemented 
@@ -187,6 +192,7 @@ class FlaskrTestCase(unittest.TestCase):
         # if we can't lock the database should do noting
         # If we acquire the lock, this file should be removed from the db
         pass
+
 
     def test_infos(self):
         # Try to get info on a wrong url. should return false
@@ -210,6 +216,7 @@ class FlaskrTestCase(unittest.TestCase):
         os.remove(osjoin(flaskr.app.config['UPLOAD_FOLDER'], file_md5))
         rv = self.app.get('/%s/infos' % file_md5, headers={'User-Agent': 'curl'})
         self.assertEquals(rv.status, '404 NOT FOUND')
+
 
 if __name__ == '__main__':
     unittest.main()
