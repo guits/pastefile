@@ -148,12 +148,27 @@ class FlaskrTestCase(unittest.TestCase):
         pass
 
     def test_infos(self):
-        # TODO
-        # Try to get info on an existing file and validate some parameters is valide. Like name or md5
         # Try to get info on a wrong url. should return false
+        rv = self.app.get('/foobar/infos', headers={'User-Agent': 'curl'})
+        self.assertEquals(rv.status, '404 NOT FOUND')
+
+        # Try to get info on an existing file and validate some parameters is valide. Like name or md5
+        # also if we lock the database, should work
+        _file = osjoin(self.testdir, 'test_file')
+        file_md5 = write_random_file(_file)
+        rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
+        with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
+            rv = self.app.get('/%s/infos' % file_md5, headers={'User-Agent': 'curl'})
+
+        self.assertEquals(rv.status, '200 OK')
+        rv_json = json.loads(rv.get_data())
+        self.assertEquals(rv_json['md5'], file_md5)
+        self.assertEquals(rv_json['name'], 'test_pastefile_random.file')
+
         # Try to get info on a file only in DB. (not on disk). Should return false
-        # optionnal : if we lock the database, should work
-        pass
+        os.remove(osjoin(flaskr.app.config['UPLOAD_FOLDER'], file_md5))
+        rv = self.app.get('/%s/infos' % file_md5, headers={'User-Agent': 'curl'})
+        self.assertEquals(rv.status, '404 NOT FOUND')
 
 if __name__ == '__main__':
     unittest.main()
