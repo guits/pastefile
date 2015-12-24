@@ -12,6 +12,8 @@ os.environ['TESTING'] = 'TRUE'
 import pastefile.app as flaskr
 from pastefile.tests.tools import write_random_file, write_file
 from pastefile import utils
+from pastefile.jsondb import JsonDB
+from pastefile import controller
 
 
 class FlaskrTestCase(unittest.TestCase):
@@ -138,13 +140,52 @@ class FlaskrTestCase(unittest.TestCase):
         # optionnal : if we lock the database, should NOT work
         pass
 
-    def test_clean_file(self):
+    def test_clean_files(self):
+        # Try to upload 2 file and force one to expire in the db.
+        # file 1
+        _file1 = osjoin(self.testdir, 'test_file1')
+        file1_md5 = write_random_file(_file1)
+        self.app.post('/', data={'file': (open(_file1, 'r'), 'test_pastefile_random1.file'),})
+        # file 2
+        _file2 = osjoin(self.testdir, 'test_file2')
+        file2_md5 = write_random_file(_file2)
+        self.app.post('/', data={'file': (open(_file2, 'r'), 'test_pastefile_random2.file'),})
+
+        # Should do nothing, no file expired
+        controller.clean_files(dbfile=flaskr.app.config['FILE_LIST'])
+
+        for md5 in [file1_md5, file2_md5]:
+            self.assertTrue(os.path.isfile(osjoin(flaskr.app.config['UPLOAD_FOLDER'], md5)))
+
+        # Set expire on one file
+        with JsonDB(dbfile=flaskr.app.config['FILE_LIST']) as db:
+            db.db[file2_md5]['timestamp'] = 0
+
+        # if we can't lock the database should do noting
+        with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
+            controller.clean_files(dbfile=flaskr.app.config['FILE_LIST'])
+
+        for md5 in [file1_md5, file2_md5]:
+            self.assertTrue(os.path.isfile(osjoin(flaskr.app.config['UPLOAD_FOLDER'], md5)))
+
+        # If we acquire the lock, file2 should be removed on disk and db
+        controller.clean_files(dbfile=flaskr.app.config['FILE_LIST'])
+
+        self.assertTrue(os.path.isfile(osjoin(flaskr.app.config['UPLOAD_FOLDER'], file1_md5)))
+        self.assertFalse(os.path.isfile(osjoin(flaskr.app.config['UPLOAD_FOLDER'], file2_md5)))
+        with JsonDB(dbfile=flaskr.app.config['FILE_LIST']) as db:
+            self.assertTrue(file1_md5 in db.db.keys())
+            self.assertFalse(file2_md5 in db.db.keys())
+
+
+
+    def test_check_db_consistency(self):
+        # This feature is not yet implemented 
+        # https://github.com/guits/pastefile/issues/48
         # TODO
-        # Try to upload 3 file
-        #   * Remove one of them from the disk
-        #   * Force a second to expire in the db.
-        #   We should have at the end 1 file on disk and db
-        # optionnal : if we lock the database, should NOT work
+        # Try to upload 2 file and remove one only from the disk.
+        # if we can't lock the database should do noting
+        # If we acquire the lock, this file should be removed from the db
         pass
 
     def test_infos(self):
