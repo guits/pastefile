@@ -187,8 +187,6 @@ def get_all_files(request, config):
     files_list_infos = {}
     with JsonDB(dbfile=config['FILE_LIST'],
                 logger=config['LOGGER_NAME']) as db:
-        if db.lock_error:
-            return "Lock timed out\n"
         instant_db = db.db
     for k, v in instant_db.iteritems():
         _infos = get_file_info(id_file=k,

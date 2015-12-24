@@ -60,13 +60,15 @@ class FlaskrTestCase(unittest.TestCase):
         filenames = [infos['name'] for md5, infos in json.loads(rv.get_data()).iteritems()]
         self.assertEquals(['test_pastefile2_random.file'], filenames)
 
+        # if we lock the database, get should work
+        with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
+            rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
+        self.assertEquals(['test_pastefile2_random.file'], filenames)
+
         # Try with ls disables
         flaskr.app.config['DISABLE_LS'] = True
         rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
         self.assertEquals(rv.get_data(), 'Administrator disabled the /ls option.\n')
-
-        # TODO
-        # optionnal : if we lock the database, get should work
 
     def test_upload_and_retrieve(self):
         # Upload a random file
