@@ -155,11 +155,14 @@ def delete_file(request, id_file, dbfile):
             os.remove(storage_full_filename)
             LOG.info("[DELETE] Client %s has deleted: %s (%s)"
                      % (request.remote_addr, db.db[id_file]['real_name'], id_file))
+        except OSError:
+            LOG.error('Error while trying to remove %s'
+                         % storage_full_filename)
+        if not os.path.isfile(storage_full_filename):
             db.delete(id_file)
             return "File %s deleted\n" % id_file
-        except IOError as e:
-            LOG.critical("Can't remove file: %s" % e)
-            return "Error: %s\n" % e
+    return 'Unable to delete file %s' % id_file
+
 
 
 def get_file(request, id_file, config):

@@ -130,12 +130,38 @@ class FlaskrTestCase(unittest.TestCase):
 
 
     def test_delete_file(self):
-        # TODO
-        # Try to delete an existing file
         # Try to delete a non existing file, should return 404
-        # Try to delete a file only in database (already deleted on the disk). Should just remove from the DB
-        # optionnal : if we lock the database, should NOT work
-        pass
+        rv = self.app.delete('/foobar', headers={'User-Agent': 'curl'})
+        self.assertEquals(rv.status, '404 NOT FOUND')
+
+        # if can't lock the database, should NOT work
+        _file = osjoin(self.testdir, 'test_file')
+        file_md5 = write_random_file(_file)
+        rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
+        with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
+            rv = self.app.delete('/%s' % file_md5, headers={'User-Agent': 'curl'})
+        self.assertTrue('Lock timed out' in rv.get_data())
+
+        # Try to delete an existing file
+        self.assertTrue(os.path.isfile(osjoin(flaskr.app.config['UPLOAD_FOLDER'], file_md5)))
+
+        rv = self.app.delete('/%s' % file_md5, headers={'User-Agent': 'curl'})
+
+        self.assertTrue('%s deleted' % file_md5 in rv.get_data())
+        self.assertFalse(os.path.isfile(osjoin(flaskr.app.config['UPLOAD_FOLDER'], file_md5)))
+        with JsonDB(dbfile=flaskr.app.config['FILE_LIST']) as db:
+            self.assertFalse(file_md5 in db.db.keys())
+
+        # Try to delete a file only in database (already deleted on the disk). Should remove from the DB
+        _file = osjoin(self.testdir, 'test_file')
+        file_md5 = write_random_file(_file)
+        rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
+        os.remove(osjoin(flaskr.app.config['UPLOAD_FOLDER'], file_md5))
+
+        rv = self.app.delete('/%s' % file_md5, headers={'User-Agent': 'curl'})
+
+        with JsonDB(dbfile=flaskr.app.config['FILE_LIST']) as db:
+            self.assertFalse(file_md5 in db.db.keys())
 
 
     def test_clean_files(self):
