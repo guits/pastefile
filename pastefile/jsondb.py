@@ -50,6 +50,7 @@ class JsonDB(object):
                 if timeout(timeout=self._timeout, start=self._start):
                     self.lock_error = True
                     self._logger.critical('Unable to lock')
+                    self._f.close()
                     break
 
     def _release(self):
