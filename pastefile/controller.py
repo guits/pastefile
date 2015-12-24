@@ -5,12 +5,11 @@ import os
 import time
 import magic
 import datetime
-import tempfile
 import logging
-from jsondb import JsonDB
-from flask import send_from_directory, abort, jsonify
-from werkzeug import secure_filename
 from pastefile import utils
+from jsondb import JsonDB
+from flask import send_from_directory, abort
+from werkzeug import secure_filename
 
 LOG = logging.getLogger(__name__)
 
@@ -64,67 +63,85 @@ def get_file_info(id_file, config, env=None):
         return False
 
 
+def add_new_file(filename, source, dest, db, md5, burn_after_read):
+
+    # If no lock, return false
+    if db.lock_error:
+        return False
+
+    # IMPROVE : possible "bug" If a file is already uploaded, the burn_after_read
+    #           Will not bu updated
+    # File already exist, return True
+    if md5 in db.db:
+        try:
+            os.remove(source)
+        except OSError as e:
+            LOG.error("Can't remove tmp file: %s" % e)
+        return True
+
+    try:
+        os.rename(source, dest)
+    except OSError as e:
+        LOG.error("Can't move processing file to storage directory: %s" % e)
+        return False
+
+    db.write(md5, {
+        'real_name': filename,
+        'storage_full_filename': dest,
+        'timestamp': int(time.time()),
+        'burn_after_read': str(burn_after_read),
+    })
+    return True
+
+
 def upload_file(request, config):
     value_burn_after_read = request.form.getlist('burn')
     if value_burn_after_read:
         burn_after_read = True
     else:
         burn_after_read = False
-    file = request.files['file']
-    if file:
-        filename = secure_filename(file.filename)
-        fd, tmp_full_filename = tempfile.mkstemp(prefix='processing-',
-                                                 dir=config['TMP_FOLDER'])
-        os.close(fd)
-        try:
-            file.save(os.path.join(tmp_full_filename))
-        except IOError as e:
-            LOG.error("Can't save tmp file: %s" % e)
-            return "Server error, contact administrator\n"
-        file_md5 = utils.get_md5(tmp_full_filename)
+
+    # Write tmp file on disk
+    try:
+        file_md5, tmp_full_filename = utils.write_tmpfile_to_disk(file=request.files['file'],
+                                                                  dest_dir=config['TMP_FOLDER'])
+    except IOError:
+        return 'Server error, contact administrator\n'
+
+    secure_name = secure_filename(request.files['file'].filename)
+
+    with JsonDB(dbfile=config['FILE_LIST']) as db:
+
+        # Just inform for debug purpose
+        if db.lock_error:
+            LOG.error("Unable to get lock during file upload %s" % file_md5)
+
+        # Try to write file on disk and db. Return false if file is not writed
         storage_full_filename = os.path.join(config['UPLOAD_FOLDER'], file_md5)
-        with JsonDB(dbfile=config['FILE_LIST']) as db:
+        succed_add_file = add_new_file(filename=secure_name,
+                                       source=tmp_full_filename,
+                                       dest=storage_full_filename,
+                                       db=db,
+                                       md5=file_md5,
+                                       burn_after_read=burn_after_read)
 
-            # Just inform for debug purpose
-            if db.lock_error:
-                LOG.error("Unable to get lock during file upload %s" % file_md5)
+    if not succed_add_file:
+        # In the case the file is not in db, we have 2 reason :
+        #  * We was not able to have the lock and write the file in the db.
+        #  * Or an error occure during the file processing
+        # In any case just tell the user to try later
+        try:
+            os.remove(tmp_full_filename)
+        except OSError as e:
+            LOG.error("Can't remove tmp file: %s" % e)
 
-            # If we can lock, add this file in pastefile
-            # tmpfile will be "removed" by rename
-            if file_md5 not in db.db and not db.lock_error:
+        LOG.info('Unable lock the db and find the file %s in db during upload' % file_md5)
+        return 'Unable to upload the file, try again later ...\n'
 
-                try:
-                    os.rename(tmp_full_filename, storage_full_filename)
-                except OSError as e:
-                    LOG.error("Can't move processing file to storage directory: %s" % e)
-                    return "Server error, contact administrator\n"
-                LOG.info("[POST] Client %s has successfully uploaded: %s (%s)"
-                         % (request.remote_addr, filename, file_md5))
-
-                db.write(file_md5, {
-                    'real_name': filename,
-                    'storage_full_filename': storage_full_filename,
-                    'timestamp': int(time.time()),
-                    'burn_after_read': str(burn_after_read),
-                })
-            else:
-                # Remove tmp posted file in any case
-                try:
-                    os.remove(tmp_full_filename)
-                except OSError as e:
-                    LOG.error("Can't remove tmp file: %s" % e)
-                    return False
-
-            # In the case the file is not in db, we have 2 reason :
-            #  * We was not able to have the lock and write the file in the db.
-            #  * Or an error occure during the file processing
-            # In any case just tell the user to try later
-            if db.lock_error and file_md5 not in db.db:
-                LOG.info('Unable lock the db and find the file %s in db during upload' % file_md5)
-                return 'Unable to upload the file, try again later ...\n'
-
-        return "%s/%s\n" % (utils.build_base_url(env=request.environ),
-                            file_md5)
+    LOG.info("[POST] Client %s has successfully uploaded: %s (%s)"
+             % (request.remote_addr, storage_full_filename, file_md5))
+    return "%s/%s\n" % (utils.build_base_url(env=request.environ),
+                        file_md5)
 
 
 def delete_file(request, id_file, dbfile):
@@ -133,16 +150,16 @@ def delete_file(request, id_file, dbfile):
             return "Lock timed out\n"
         if id_file not in db.db:
             return abort(404)
-    try:
-        storage_full_filename = db.db[id_file]['storage_full_filename']
-        os.remove(storage_full_filename)
-        LOG.info("[DELETE] Client %s has deleted: %s (%s)"
-                 % (request.remote_addr, db.db[id_file]['real_name'], id_file))
-        db.delete(id_file)
-        return "File %s deleted\n" % id_file
-    except IOError as e:
-        LOG.critical("Can't remove file: %s" % e)
-        return "Error: %s\n" % e
+        try:
+            storage_full_filename = db.db[id_file]['storage_full_filename']
+            os.remove(storage_full_filename)
+            LOG.info("[DELETE] Client %s has deleted: %s (%s)"
+                     % (request.remote_addr, db.db[id_file]['real_name'], id_file))
+            db.delete(id_file)
+            return "File %s deleted\n" % id_file
+        except IOError as e:
+            LOG.critical("Can't remove file: %s" % e)
+            return "Error: %s\n" % e
 
 
 def get_file(request, id_file, config):
@@ -182,4 +199,4 @@ def get_all_files(request, config):
         if not _infos:
             continue
         files_list_infos[k] = _infos
-    return jsonify(files_list_infos)
+    return files_list_infos
