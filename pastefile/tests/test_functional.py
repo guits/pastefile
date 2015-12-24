@@ -5,11 +5,12 @@ from os.path import join as osjoin
 import unittest
 import json
 import shutil
+import mock
 os.environ['PASTEFILE_SETTINGS'] = '../pastefile-test.cfg'
 os.environ['TESTING'] = 'TRUE'
 
 import pastefile.app as flaskr
-from pastefile.tests.tools import write_random_file
+from pastefile.tests.tools import write_random_file, write_file
 from pastefile import utils
 
 
@@ -74,7 +75,13 @@ class FlaskrTestCase(unittest.TestCase):
         rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
         self.assertEquals(rv.data, "http://localhost/%s\n" % (test_md5))
         self.assertEquals(rv.status, '200 OK')
+
+        # Get the file
         rv = self.app.get("/%s" % (test_md5), headers={'User-Agent': 'curl'})
+        gotten_file = osjoin(self.testdir, 'gotten_test_file')
+        gotten_test_md5 = write_file(filename=gotten_file, content=rv.get_data())
+
+        self.assertEquals(test_md5, gotten_test_md5)
         self.assertEquals(rv.status, '200 OK')
 
         # Try to re upload the same file. Should return same url
@@ -91,9 +98,33 @@ class FlaskrTestCase(unittest.TestCase):
         md5s = sorted([md5 for md5 in db_content.keys()])
         self.assertEquals(sorted([test_md5, test_md5_bis]), md5s)
 
-        # TODO
-        # optionnal : if we lock the database, post should NOT work
-        # optionnal : if we lock the database, get should work
+        # can't lock the database, post should work for an existing file (using last test file)
+        with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
+            # Take file from last test
+            rv = self.app.post('/', data={'file': (open(_file_bis, 'r'), 'test_pastefile_random.file'),})
+        self.assertEquals(rv.data, "http://localhost/%s\n" % (test_md5_bis))
+
+        # FAILING NEED TO FIX THE CODE : return lock error
+        # Related to https://github.com/guits/pastefile/issues/44
+        ## can't lock the database, get should work (using last test file)
+        #with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
+        #    # Take file from last test
+        #    rv = self.app.get("/%s" % (test_md5_bis), headers={'User-Agent': 'curl'})
+        #gotten_file = osjoin(self.testdir, 'gotten_test_file')
+        #gotten_test_md5 = write_file(filename=gotten_file, content=rv.get_data())
+
+        #print os.system('find %s -type f -exec md5sum {} \;' % self.testdir)
+        #print os.system('find %s -type f -exec echo {} \; -exec cat {} \;' % self.testdir)
+        #self.assertEquals(test_md5_bis, gotten_test_md5)
+        #self.assertEquals(rv.status, '200 OK')
+
+        # can't lock the database, post should NOT work for new file
+        with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
+            _file = osjoin(self.testdir, 'test_file')
+            test_md5 = write_random_file(_file)
+            rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
+            self.assertTrue('Unable to upload the file' in rv.data)
+
 
     def test_delete_file(self):
         # TODO
