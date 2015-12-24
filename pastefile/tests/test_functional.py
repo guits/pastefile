@@ -104,19 +104,14 @@ class FlaskrTestCase(unittest.TestCase):
             rv = self.app.post('/', data={'file': (open(_file_bis, 'r'), 'test_pastefile_random.file'),})
         self.assertEquals(rv.get_data(), "http://localhost/%s\n" % (test_md5_bis))
 
-        # FAILING NEED TO FIX THE CODE : return lock error
-        # Related to https://github.com/guits/pastefile/issues/44
-        ## can't lock the database, get should work (using last test file)
-        #with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
-        #    # Take file from last test
-        #    rv = self.app.get("/%s" % (test_md5_bis), headers={'User-Agent': 'curl'})
-        #gotten_file = osjoin(self.testdir, 'gotten_test_file')
-        #gotten_test_md5 = write_file(filename=gotten_file, content=rv.get_data())
-
-        #print os.system('find %s -type f -exec md5sum {} \;' % self.testdir)
-        #print os.system('find %s -type f -exec echo {} \; -exec cat {} \;' % self.testdir)
-        #self.assertEquals(test_md5_bis, gotten_test_md5)
-        #self.assertEquals(rv.status, '200 OK')
+        # can't lock the database, get should work (using last test file)
+        with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
+            # Take file from last test
+            rv = self.app.get("/%s" % (test_md5_bis), headers={'User-Agent': 'curl'})
+        gotten_file = osjoin(self.testdir, 'gotten_test_file')
+        gotten_test_md5 = write_file(filename=gotten_file, content=rv.get_data())
+        self.assertEquals(test_md5_bis, gotten_test_md5)
+        self.assertEquals(rv.status, '200 OK')
 
         # can't lock the database, post should NOT work for new file
         with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):

@@ -164,8 +164,6 @@ def delete_file(request, id_file, dbfile):
 
 def get_file(request, id_file, config):
     with JsonDB(dbfile=config['FILE_LIST']) as db:
-        if db.lock_error:
-            return "Lock timed out\n"
         if id_file not in db.db:
             return abort(404)
 
