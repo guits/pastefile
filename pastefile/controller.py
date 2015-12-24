@@ -65,19 +65,19 @@ def get_file_info(id_file, config, env=None):
 
 def add_new_file(filename, source, dest, db, md5, burn_after_read):
 
-    # If no lock, return false
-    if db.lock_error:
-        return False
-
     # IMPROVE : possible "bug" If a file is already uploaded, the burn_after_read
     #           Will not bu updated
-    # File already exist, return True
+    # File already exist, return True and remove ths source
     if md5 in db.db:
         try:
             os.remove(source)
         except OSError as e:
             LOG.error("Can't remove tmp file: %s" % e)
         return True
+
+    # If no lock, return false
+    if db.lock_error:
+        return False
 
     try:
         os.rename(source, dest)
