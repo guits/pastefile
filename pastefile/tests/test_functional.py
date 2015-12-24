@@ -33,13 +33,13 @@ class FlaskrTestCase(unittest.TestCase):
 
     def test_slash(self):
         rv = self.app.get('/', headers={'User-Agent': 'curl'})
-        assert 'Get infos about one file' in rv.data
+        assert 'Get infos about one file' in rv.get_data()
 
     def test_ls(self):
         # Test ls without files
         rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
         self.assertEquals('200 OK', rv.status)
-        self.assertEquals(json.loads(rv.data), {})
+        self.assertEquals(json.loads(rv.get_data()), {})
 
         # With one posted file
         _file = osjoin(self.testdir, 'test_file')
@@ -48,7 +48,7 @@ class FlaskrTestCase(unittest.TestCase):
         rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
         self.assertEquals('200 OK', rv.status)
         # basic check if we have an array like {md5: {name: ...}}
-        filenames = [infos['name'] for md5, infos in json.loads(rv.data).iteritems()]
+        filenames = [infos['name'] for md5, infos in json.loads(rv.get_data()).iteritems()]
         self.assertEquals(['test_pastefile_random.file'], filenames)
 
         # Add one new file. Remove the first file from disk only in the last test
@@ -57,13 +57,13 @@ class FlaskrTestCase(unittest.TestCase):
         write_random_file(_file)
         rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile2_random.file'),})
         rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
-        filenames = [infos['name'] for md5, infos in json.loads(rv.data).iteritems()]
+        filenames = [infos['name'] for md5, infos in json.loads(rv.get_data()).iteritems()]
         self.assertEquals(['test_pastefile2_random.file'], filenames)
 
         # Try with ls disables
         flaskr.app.config['DISABLE_LS'] = True
         rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
-        self.assertEquals(rv.data, 'Administrator disabled the /ls option.\n')
+        self.assertEquals(rv.get_data(), 'Administrator disabled the /ls option.\n')
 
         # TODO
         # optionnal : if we lock the database, get should work
@@ -73,7 +73,7 @@ class FlaskrTestCase(unittest.TestCase):
         _file = osjoin(self.testdir, 'test_file')
         test_md5 = write_random_file(_file)
         rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
-        self.assertEquals(rv.data, "http://localhost/%s\n" % (test_md5))
+        self.assertEquals(rv.get_data(), "http://localhost/%s\n" % (test_md5))
         self.assertEquals(rv.status, '200 OK')
 
         # Get the file
@@ -86,13 +86,13 @@ class FlaskrTestCase(unittest.TestCase):
 
         # Try to re upload the same file. Should return same url
         rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
-        self.assertEquals(rv.data, "http://localhost/%s\n" % (test_md5))
+        self.assertEquals(rv.get_data(), "http://localhost/%s\n" % (test_md5))
 
         # Try to upload a second file with the same filename. Both file should still available
         _file_bis = osjoin(self.testdir, 'test_file')
         test_md5_bis = write_random_file(_file_bis)
         rv = self.app.post('/', data={'file': (open(_file_bis, 'r'), 'test_pastefile_random.file'),})
-        self.assertEquals(rv.data, "http://localhost/%s\n" % (test_md5_bis))
+        self.assertEquals(rv.get_data(), "http://localhost/%s\n" % (test_md5_bis))
 
         db_content = json.load(open(flaskr.app.config['FILE_LIST']))
         md5s = sorted([md5 for md5 in db_content.keys()])
@@ -102,7 +102,7 @@ class FlaskrTestCase(unittest.TestCase):
         with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
             # Take file from last test
             rv = self.app.post('/', data={'file': (open(_file_bis, 'r'), 'test_pastefile_random.file'),})
-        self.assertEquals(rv.data, "http://localhost/%s\n" % (test_md5_bis))
+        self.assertEquals(rv.get_data(), "http://localhost/%s\n" % (test_md5_bis))
 
         # FAILING NEED TO FIX THE CODE : return lock error
         # Related to https://github.com/guits/pastefile/issues/44
@@ -123,7 +123,7 @@ class FlaskrTestCase(unittest.TestCase):
             _file = osjoin(self.testdir, 'test_file')
             test_md5 = write_random_file(_file)
             rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
-            self.assertTrue('Unable to upload the file' in rv.data)
+            self.assertTrue('Unable to upload the file' in rv.get_data())
 
 
     def test_delete_file(self):
