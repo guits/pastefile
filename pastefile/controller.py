@@ -21,21 +21,27 @@ def get_infos_file_from_md5(md5, dbfile):
     return db.read(md5)
 
 
+def remove_file(db, file_id):
+    "Remove a file on disk and in db"
+    try:
+        os.remove(db.db[file_id]['storage_full_filename'])
+    except OSError:
+        LOG.error('Error while trying to remove %s'
+                  % file_id)
+    if not os.path.isfile(db.db[file_id]['storage_full_filename']):
+        db.delete(file_id)
+        return True
+    return False
+
+
 def clean_files(dbfile, expire=86400):
     with JsonDB(dbfile=dbfile) as db:
         if db.lock_error:
             LOG.warning('Cant clean files')
             return False
         for k, v in list(db.db.iteritems()):
-            if int(db.db[k]['timestamp']) < int(time.time() -
-               int(expire)):
-                try:
-                    os.remove(db.db[k]['storage_full_filename'])
-                except OSError:
-                    LOG.critical('Error while trying to remove %s'
-                                 % db.db[k]['storage_full_filename'])
-                if not os.path.isfile(db.db[k]['storage_full_filename']):
-                    db.delete(k)
+            if int(db.db[k]['timestamp']) < int(time.time() - int(expire)):
+                remove_file(db=db, file_id=k)
 
 
 def get_file_info(id_file, config, env=None):
@@ -150,19 +156,13 @@ def delete_file(request, id_file, dbfile):
             return "Lock timed out\n"
         if id_file not in db.db:
             return abort(404)
-        try:
-            storage_full_filename = db.db[id_file]['storage_full_filename']
-            os.remove(storage_full_filename)
-            LOG.info("[DELETE] Client %s has deleted: %s (%s)"
-                     % (request.remote_addr, db.db[id_file]['real_name'], id_file))
-        except OSError:
-            LOG.error('Error while trying to remove %s'
-                         % storage_full_filename)
-        if not os.path.isfile(storage_full_filename):
-            db.delete(id_file)
-            return "File %s deleted\n" % id_file
-    return 'Unable to delete file %s' % id_file
 
+        if not remove_file(db=db, file_id=id_file):
+            return 'Unable to delete file %s\n' % id_file
+
+        LOG.info("[DELETE] Client %s has deleted: %s"
+                 % (request.remote_addr, id_file))
+        return "File %s deleted\n" % id_file
 
 
 def get_file(request, id_file, config):
