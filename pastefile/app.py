@@ -49,7 +49,9 @@ def upload_file():
 
 @app.route('/<id_file>/infos', methods=['GET'])
 def display_file_infos(id_file):
-    file_infos = controller.get_file_info(id_file, env=request.environ)
+    file_infos = controller.get_file_info(id_file=id_file,
+                                          config=app.config,
+                                          env=request.environ)
     if not file_infos:
         return abort(404)
     return jsonify(file_infos)

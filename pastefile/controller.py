@@ -15,10 +15,23 @@ LOG = logging.getLogger(__name__)
 
 
 def get_infos_file_from_md5(md5, dbfile):
-    with JsonDB(dbfile=dbfile) as db:
-        if db.lock_error:
-            return False
-        return db.read(md5)
+    # Open JsonDB for read only
+    db = JsonDB(dbfile=dbfile)
+    db.load()
+    return db.read(md5)
+
+
+def remove_file(db, file_id):
+    "Remove a file on disk and in db"
+    try:
+        os.remove(db.db[file_id]['storage_full_filename'])
+    except OSError:
+        LOG.error('Error while trying to remove %s'
+                  % file_id)
+    if not os.path.isfile(db.db[file_id]['storage_full_filename']):
+        db.delete(file_id)
+        return True
+    return False
 
 
 def clean_files(dbfile, expire=86400):
@@ -27,15 +40,8 @@ def clean_files(dbfile, expire=86400):
             LOG.warning('Cant clean files')
             return False
         for k, v in list(db.db.iteritems()):
-            if int(db.db[k]['timestamp']) < int(time.time() -
-               int(expire)):
-                try:
-                    os.remove(db.db[k]['storage_full_filename'])
-                except OSError:
-                    LOG.critical('Error while trying to remove %s'
-                                 % db.db[k]['storage_full_filename'])
-                if not os.path.isfile(db.db[k]['storage_full_filename']):
-                    db.delete(k)
+            if int(db.db[k]['timestamp']) < int(time.time() - int(expire)):
+                remove_file(db=db, file_id=k)
 
 
 def get_file_info(id_file, config, env=None):
@@ -150,49 +156,44 @@ def delete_file(request, id_file, dbfile):
             return "Lock timed out\n"
         if id_file not in db.db:
             return abort(404)
-        try:
-            storage_full_filename = db.db[id_file]['storage_full_filename']
-            os.remove(storage_full_filename)
-            LOG.info("[DELETE] Client %s has deleted: %s (%s)"
-                     % (request.remote_addr, db.db[id_file]['real_name'], id_file))
-            db.delete(id_file)
-            return "File %s deleted\n" % id_file
-        except IOError as e:
-            LOG.critical("Can't remove file: %s" % e)
-            return "Error: %s\n" % e
+
+        if not remove_file(db=db, file_id=id_file):
+            return 'Unable to delete file %s\n' % id_file
+
+        LOG.info("[DELETE] Client %s has deleted: %s"
+                 % (request.remote_addr, id_file))
+        return "File %s deleted\n" % id_file
 
 
 def get_file(request, id_file, config):
-    with JsonDB(dbfile=config['FILE_LIST']) as db:
-        if db.lock_error:
-            return "Lock timed out\n"
-        if id_file not in db.db:
-            return abort(404)
+    # Open JsonDB for read only
+    db = JsonDB(dbfile=config['FILE_LIST'])
+    db.load()
+    if id_file not in db.db:
+        return abort(404)
 
-        filename = os.path.basename(db.db[id_file]['storage_full_filename'])
-        LOG.info("[GET] Client %s has requested: %s (%s)"
-                 % (request.remote_addr, db.db[id_file]['real_name'], id_file))
+    filename = os.path.basename(db.db[id_file]['storage_full_filename'])
+    LOG.info("[GET] Client %s has requested: %s (%s)"
+             % (request.remote_addr, db.db[id_file]['real_name'], id_file))
 
-        if not os.path.isabs(config['UPLOAD_FOLDER']):
-            path = "%s/%s" % (os.path.dirname(config['instance_path']),
-                              config['UPLOAD_FOLDER'])
-        else:
-            path = config['UPLOAD_FOLDER']
+    if not os.path.isabs(config['UPLOAD_FOLDER']):
+        path = "%s/%s" % (os.path.dirname(config['instance_path']),
+                          config['UPLOAD_FOLDER'])
+    else:
+        path = config['UPLOAD_FOLDER']
 
-        return send_from_directory(path,
-                                   filename,
-                                   attachment_filename=db.db[id_file]['real_name'],
-                                   as_attachment=True)
+    return send_from_directory(path,
+                               filename,
+                               attachment_filename=db.db[id_file]['real_name'],
+                               as_attachment=True)
 
 
 def get_all_files(request, config):
+    # Open JsonDB for read only
+    db = JsonDB(dbfile=config['FILE_LIST'], logger=config['LOGGER_NAME'])
+    db.load()
     files_list_infos = {}
-    with JsonDB(dbfile=config['FILE_LIST'],
-                logger=config['LOGGER_NAME']) as db:
-        if db.lock_error:
-            return "Lock timed out\n"
-        instant_db = db.db
-    for k, v in instant_db.iteritems():
+    for k, v in db.db.iteritems():
         _infos = get_file_info(id_file=k,
                                config=config,
                                env=request.environ)
