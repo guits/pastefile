@@ -64,6 +64,12 @@ def get_or_delete_file(id_file):
                                    id_file=id_file,
                                    config=app.config)
     if request.method == 'DELETE':
+        try:
+            if 'delete' in app.config['DISABLED_FEATURE']:
+                LOG.info("[delete] Tried to call delete but this url is disabled")
+                return 'Administrator disabled the delete option.\n'
+        except (KeyError, TypeError):
+            pass
         return controller.delete_file(request=request,
                                       id_file=id_file,
                                       dbfile=app.config['FILE_LIST'])
@@ -71,9 +77,12 @@ def get_or_delete_file(id_file):
 
 @app.route('/ls', methods=['GET'])
 def list_all_files():
-    if app.config['DISABLE_LS']:
-        LOG.info("[LS] Tried to call /ls but this url is disabled")
-        return 'Administrator disabled the /ls option.\n'
+    try:
+        if 'ls' in app.config['DISABLED_FEATURE']:
+            LOG.info("[LS] Tried to call /ls but this url is disabled")
+            return 'Administrator disabled the /ls option.\n'
+    except (KeyError, TypeError):
+        pass
 
     controller.clean_files(dbfile=app.config['FILE_LIST'],
                            expire=app.config['EXPIRE'])

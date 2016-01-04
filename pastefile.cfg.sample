@@ -5,5 +5,6 @@ EXPIRE = 86400
 DEBUG_PORT = 5000
 LOG = "/tmp/pastefile.log"
 
-# Disable or not /ls url
-DISABLE_LS = False
+# List of features you want to disable
+# Allowed value : delete, ls
+DISABLED_FEATURE = []

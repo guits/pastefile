@@ -72,7 +72,7 @@ class FlaskrTestCase(unittest.TestCase):
         self.assertEquals(['test_pastefile2_random.file'], filenames)
 
         # Try with ls disables
-        flaskr.app.config['DISABLE_LS'] = True
+        flaskr.app.config['DISABLED_FEATURE'] = ['ls']
         rv = self.app.get('/ls', headers={'User-Agent': 'curl'})
         self.assertEquals(rv.get_data(), 'Administrator disabled the /ls option.\n')
 
@@ -162,6 +162,11 @@ class FlaskrTestCase(unittest.TestCase):
 
         with JsonDB(dbfile=flaskr.app.config['FILE_LIST']) as db:
             self.assertFalse(file_md5 in db.db.keys())
+
+        # Try with delete disables
+        flaskr.app.config['DISABLED_FEATURE'] = ['delete']
+        rv = self.app.delete('/%s' % file_md5, headers={'User-Agent': 'curl'})
+        self.assertEquals(rv.get_data(), 'Administrator disabled the delete option.\n')
 
 
     def test_clean_files(self):
