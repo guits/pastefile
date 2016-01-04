@@ -4,6 +4,8 @@ import json
 import logging
 import fcntl
 import time
+import tempfile
+import os
 
 
 def timeout(timeout=3, start=None):
@@ -14,12 +16,13 @@ def timeout(timeout=3, start=None):
 
 
 class JsonDB(object):
-    def __init__(self, dbfile, logger=__name__, timeout=60):
+    def __init__(self, dbfile, logger=__name__, timeout=60, tmp_dir='/tmp'):
         self._dbfile = dbfile
         self._logger = logging.getLogger(logger)
         self.db = {}
         self._timeout = timeout
         self.lock_error = False
+        self._tmp_dir = tmp_dir
 
     def __enter__(self):
         if not self._lock():
@@ -62,8 +65,14 @@ class JsonDB(object):
             self._logger.debug("Can't load file: %s" % e)
 
     def save(self):
-        with open(self._dbfile, 'w') as f:
-            json.dump(self.db, f)
+        try:
+            fd, tmp_file = tempfile.mkstemp(prefix='jsondb-',
+                                            dir=self._tmp_dir)
+            json.dump(self.db, os.fdopen(fd, 'w'))
+            os.rename(tmp_file, self._dbfile)
+
+        except OSError as e:
+            self._logger.error('Error while saving the db: %s' % e)
 
     def delete(self, key):
         del self.db[key]
