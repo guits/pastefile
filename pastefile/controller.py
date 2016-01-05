@@ -201,3 +201,14 @@ def get_all_files(request, config):
             continue
         files_list_infos[k] = _infos
     return files_list_infos
+
+
+def db_purge(dbfile):
+    """If a file is not present but present in db
+    this function will clean it from the db"""
+    with JsonDB(dbfile=dbfile) as db:
+        for k, v in db.db.items():
+            elt = db.db[k]['storage_full_filename']
+            if not os.path.exists(elt):
+                LOG.info("%s present in db but doesn't exist" % elt)
+                db.delete(k)
