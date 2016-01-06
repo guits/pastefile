@@ -208,11 +208,26 @@ class FlaskrTestCase(unittest.TestCase):
 
 
     def test_burn_after_read(self):
-        # TODO
-        # Try to upload a file and get it one time.
-        # Try to get the file a second time, it should NOT work
-        # optionnal : if we lock the database, should NOT work
-        pass
+        # Upload a random file
+        _file = osjoin(self.testdir, 'test_file')
+        test_md5 = write_random_file(_file)
+        rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'), 'burn': 'True',})
+
+        # Try to get the file but can't acquire the lock. Shouldn't not send the file.
+        with mock.patch('pastefile.controller.JsonDB._lock', mock.Mock(return_value=False)):
+            rv = self.app.get('/%s' % test_md5, headers={'User-Agent': 'curl'})
+        self.assertEquals("Can't lock db for burning file", rv.get_data())
+
+        # Try to get the file with the lock acquired. Should send the file.
+        rv = self.app.get('/%s' % test_md5, headers={'User-Agent': 'curl'})
+        gotten_file = osjoin(self.testdir, 'gotten_test_file')
+        gotten_test_md5 = write_file(filename=gotten_file, content=rv.get_data())
+        self.assertEquals(test_md5, gotten_test_md5)
+
+        # Try to get the file a second time, shouldn't work and return a 404 since it is 'burned'.
+        rv = self.app.get('/%s' % test_md5, headers={'User-Agent': 'curl'})
+        self.assertEquals(rv.status, '404 NOT FOUND')
+
 
 
     def test_check_db_consistency(self):
