@@ -166,11 +166,18 @@ def delete_file(request, id_file, dbfile):
 
 
 def get_file(request, id_file, config):
-    # Open JsonDB for read only
+    # First, open JsonDB for read-only
     db = JsonDB(dbfile=config['FILE_LIST'])
     db.load()
-    if id_file not in db.db:
+    if id_file not in db.db or db.db[id_file]['burn_after_read'] == 'Burned':
         return abort(404)
+    if db.db[id_file]['burn_after_read'] == 'True':
+        # Now, try to lock the db
+        if not db._lock():
+            return "Can't lock db for burning file"
+        db.db[id_file]['burn_after_read'] = 'Burned'
+        db.save()
+        db._release()
 
     filename = os.path.basename(db.db[id_file]['storage_full_filename'])
     LOG.info("[GET] Client %s has requested: %s (%s)"
