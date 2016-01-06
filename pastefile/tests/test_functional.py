@@ -91,6 +91,7 @@ class FlaskrTestCase(unittest.TestCase):
 
         self.assertEquals(test_md5, gotten_test_md5)
         self.assertEquals(rv.status, '200 OK')
+        self.assertEquals(rv.headers['Content-Disposition'], 'attachment; filename=test_pastefile_random.file')
 
         # Try to re upload the same file. Should return same url
         rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
