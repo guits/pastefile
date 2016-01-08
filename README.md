@@ -194,7 +194,7 @@ curl -XDELETE http://pastefile.fr/<id>
 
 You can use this tips by adding this line in your ```.bashrc``` :
 ```bash
-pastefile() { curl -F file=@$1 http://pastefile.fr; }
+pastefile() { curl -F file=@"$1" http://pastefile.fr; }
 ```
 so you can just type:
 ```bash

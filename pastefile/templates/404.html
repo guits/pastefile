@@ -2,7 +2,7 @@
 {%- if 'curl' in user_agent -%}
 Usage:
 
-{% for title, command in helps.iteritems() -%}
+{% for title, command in helps -%}
 {{ title }}
    # {{ command }}
 
@@ -21,7 +21,7 @@ Source : https://github.com/guits/pastefile
 </form><br><br>
 <b>Usage:</b><br><br>
 
-{% for title, command in helps.iteritems() -%}
+{% for title, command in helps -%}
 {{ title }}</br>
 # {{ command }}</br></br>
 
