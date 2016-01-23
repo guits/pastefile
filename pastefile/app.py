@@ -95,13 +95,14 @@ def page_not_found(e):
     # request.method == 'GET'
     base_url = utils.build_base_url(env=request.environ)
 
-    helps = {
-      "Upload a file:": "curl -F file=@**filename** %s" % base_url,
-      "View all uploaded files:": "curl %s/ls" % base_url,
-      "Get infos about one file:": "curl %s/**file_id**/infos" % base_url,
-      "Get a file:": "curl -JO %s/**file_id**" % base_url,
-      "Delete a file:": "curl -XDELETE %s/**id**" % base_url,
-      }
+    helps = (
+      ("Upload a file:", "curl -F file=@**filename** %s" % base_url),
+      ("View all uploaded files:", "curl %s/ls" % base_url),
+      ("Get infos about one file:", "curl %s/**file_id**/infos" % base_url),
+      ("Get a file:", "curl -JO %s/**file_id**" % base_url),
+      ("Delete a file:", "curl -XDELETE %s/**id**" % base_url),
+      ("Create an alias for cli usage", 'pastefile() { curl -F file=@"$1" %s; }' % base_url),
+    )
     context = {'user_agent': request.headers.get('User-Agent', ''),
                'helps': helps}
     return render_template('404.html', **context), 404
