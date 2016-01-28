@@ -10,7 +10,7 @@ from functools import partial
 LOG = logging.getLogger(__name__)
 
 
-def build_base_url(env=None):
+def build_base_url(env):
     """Build a base url from an app environment.
        return http://mypastefileurl.foo"""
     return "%s://%s" % (env['wsgi.url_scheme'], env['HTTP_HOST'])

@@ -44,7 +44,7 @@ def clean_files(dbfile, expire=86400):
                 remove_file(db=db, file_id=k)
 
 
-def get_file_info(id_file, config, env=None):
+def get_file_info(id_file, config, env):
     infos = get_infos_file_from_md5(md5=id_file, dbfile=config['FILE_LIST'])
     if not infos:
         return False
