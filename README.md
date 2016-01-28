@@ -5,13 +5,16 @@ Little daemon written with python flask for sharing any files quickly via http
 ------------------------------------------------------------------------------
 
 - [Installation](#Installation)
+  - [Quick run for test purpose](#Quick-run-for-test-purpose)
   - [Standard](#Standard)
   - [Docker](#Docker)
+- [Options](#Options)
 - [Usage](#Usage)
 
 
 # Installation
 You can either install by yourself with nginx or apache and use a custom configuration for uwsgi or build a docker image with the Dockerfile provided.
+
 
 ## Quick run for test purpose
 
@@ -25,7 +28,6 @@ cd pastefile && cp pastefile.cfg.sample pastefile.cfg
 # Modify pastefile.cfg config to adapt pastefile directories
 ./pastefile-run.py -c $PWD/pastefile.cfg
 ```
-
 
 ## Standard
 ```bash
@@ -50,26 +52,6 @@ Change parameters as you need:
 ```bash
 vim /etc/pastefile.cfg
 ```
-
-|Parameters     |Usage                                   |
-|---------------|----------------------------------------|
-|UPLOAD_FOLDER  |   Where the files are stored.            |
-|FILE_LIST      |  The file that act as the db (jsondb)  |
-|TMP_FOLDER     |  The folder where the files are stored during the transfer | 
-|EXPIRE         |  How many long the files are stored (in seconds)     |
-|DEBUG_PORT     |  The port used for debugging mode |
-|LOG            |  The path to the log file |
-
-> **Note**:
-
-> **The directory and the db file must be writable by uwsgi.**
-
-> the format must be KEY = VALUE.
-
-> the KEY must be in uppercase
-
-> if the parameter is a string, you must quote it with **""**
-
 **Nginx configuration:**
 
 > /etc/nginx/nginx.conf :
@@ -123,9 +105,7 @@ server {
 
 **uwsgi configuration:**
 
-
 > /etc/uwsgi/apps-available/pastefile.ini :
-
 
 ```
 [uwsgi]
@@ -165,6 +145,31 @@ You can then run a container:
 docker run -t -d -i --name=pastefile pastefile
 ```
 this is the easiest way to get a pastefile application running quickly.
+
+
+# Options
+
+|Parameters       | Usage                                                                                                                                      |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+|UPLOAD_FOLDER    | Where the files are stored.                                                                                                                |
+|FILE_LIST        | The file that act as the db (jsondb)                                                                                                       |
+|TMP_FOLDER       | The folder where the files are stored during the transfer                                                                                  |
+|EXPIRE           | How many long the files are stored (in seconds)                                                                                            |
+|DEBUG_PORT       | The port used for debugging mode                                                                                                           |
+|LOG              | The path to the log file                                                                                                                   |
+|DISABLED_FEATURE | List of features you want to disable. Allowed value : `delete`, `ls`                                                                       |
+|DISPLAY_FOR      | Display file like png or txt directly in your browser instead of asking for download. Allowed list from flask `request.user_agent.browser` |
+
+> **Note**:
+
+> **The directory and the db file must be writable by uwsgi.**
+
+> the format must be KEY = VALUE.
+
+> the KEY must be in uppercase
+
+> if the parameter is a string, you must quote it with **""**
+
 
 # Usage
 Upload a file:

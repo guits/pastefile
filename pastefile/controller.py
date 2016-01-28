@@ -44,7 +44,7 @@ def clean_files(dbfile, expire=86400):
                 remove_file(db=db, file_id=k)
 
 
-def get_file_info(id_file, config, env=None):
+def get_file_info(id_file, config, env):
     infos = get_infos_file_from_md5(md5=id_file, dbfile=config['FILE_LIST'])
     if not infos:
         return False
@@ -59,7 +59,8 @@ def get_file_info(id_file, config, env=None):
             'burn_after_read': infos['burn_after_read'],
             'timestamp': infos['timestamp'],
             'expire': expire,
-            'type': magic.from_file(infos['storage_full_filename']),
+            'mime_type': infos['mime_type'],
+            'type': infos['type'],
             'size': size,
             'url': "%s/%s" % (utils.build_base_url(env=env), id_file)
         }
@@ -69,7 +70,7 @@ def get_file_info(id_file, config, env=None):
         return False
 
 
-def add_new_file(filename, source, dest, db, md5, burn_after_read):
+def add_new_file(filename, source, dest, db, mime_type, type, md5, burn_after_read):
 
     # IMPROVE : possible "bug" If a file is already uploaded, the burn_after_read
     #           Will not bu updated
@@ -93,6 +94,8 @@ def add_new_file(filename, source, dest, db, md5, burn_after_read):
 
     db.write(md5, {
         'real_name': filename,
+        'type': type,
+        'mime_type': mime_type,
         'storage_full_filename': dest,
         'timestamp': int(time.time()),
         'burn_after_read': str(burn_after_read),
@@ -124,9 +127,13 @@ def upload_file(request, config):
 
         # Try to write file on disk and db. Return false if file is not writed
         storage_full_filename = os.path.join(config['UPLOAD_FOLDER'], file_md5)
+        mime_type = magic.from_file(tmp_full_filename, mime=True)
+        _type = magic.from_file(tmp_full_filename)
         succed_add_file = add_new_file(filename=secure_name,
                                        source=tmp_full_filename,
                                        dest=storage_full_filename,
+                                       mime_type=mime_type,
+                                       type=_type,
                                        db=db,
                                        md5=file_md5,
                                        burn_after_read=burn_after_read)
@@ -189,8 +196,17 @@ def get_file(request, id_file, config):
     else:
         path = config['UPLOAD_FOLDER']
 
+    # If the user agent is in the display list, format headers to direct display feature
+    if request.user_agent.browser in config['DISPLAY_FOR']:
+        return send_from_directory(path,
+                                   filename,
+                                   mimetype=db.db[id_file]['mime_type'],
+                                   attachment_filename=db.db[id_file]['real_name'])
+
+    # Else keep the regular send file
     return send_from_directory(path,
                                filename,
+                               mimetype=db.db[id_file]['mime_type'],
                                attachment_filename=db.db[id_file]['real_name'],
                                as_attachment=True)
 
