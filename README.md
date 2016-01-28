@@ -158,6 +158,7 @@ this is the easiest way to get a pastefile application running quickly.
 |DEBUG_PORT       | The port used for debugging mode                                                                                                           |
 |LOG              | The path to the log file                                                                                                                   |
 |DISABLED_FEATURE | List of features you want to disable. Allowed value : `delete`, `ls`                                                                       |
+|DISPLAY_FOR      | Display file like png or txt directly in your browser instead of asking for download. Allowed list from flask `request.user_agent.browser` |
 
 > **Note**:
 

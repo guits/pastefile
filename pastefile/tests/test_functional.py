@@ -129,6 +129,36 @@ class FlaskrTestCase(unittest.TestCase):
             rv = self.app.post('/', data={'file': (open(_file, 'r'), 'test_pastefile_random.file'),})
             self.assertTrue('Unable to upload the file' in rv.get_data())
 
+    def test_display_feature(self):
+        flaskr.app.config['DISPLAY_FOR'] = ['firefox']
+
+        # Upload a txt file and random file
+        binary_file = osjoin(self.testdir, 'binary_file')
+        binary_md5 = write_random_file(binary_file)
+        self.app.post('/', data={'file': (open(binary_file, 'r'), 'test_pastefile.binary'),})
+
+        txt_file = osjoin(self.testdir, 'txt_file')
+        txt_md5 = write_file(txt_file, 'foobar')
+        self.app.post('/', data={'file': (open(txt_file, 'r'), 'test_pastefile.txt'),})
+
+        # Get the file without display mode cause curl useragent
+        # The header Content-Disposition with attachment is only added when a file will not be displayed
+        rv = self.app.get("/%s" % (binary_md5), headers={'User-Agent': 'curl'})
+        self.assertEquals(rv.headers['Content-Disposition'], 'attachment; filename=test_pastefile.binary')
+
+        rv = self.app.get("/%s" % (txt_md5), headers={'User-Agent': 'curl'})
+        self.assertEquals(rv.headers['Content-Disposition'], 'attachment; filename=test_pastefile.txt')
+
+        # do the same with foo user agent. display should be enabled
+        # Header Content-Disposition should not have attachment
+        # Content-type should contain the good mem type
+        rv = self.app.get("/%s" % (binary_md5), headers={'User-Agent': 'firefox'})
+        self.assertEquals(rv.headers['Content-Type'], 'application/octet-stream')
+        self.assertFalse('Content-Disposition' in rv.headers)
+
+        rv = self.app.get("/%s" % (txt_md5), headers={'User-Agent': 'firefox'})
+        self.assertEquals(rv.headers['Content-Type'], 'text/plain; charset=utf-8')
+        self.assertFalse('Content-Disposition' in rv.headers)
 
     def test_delete_file(self):
         # Try to delete a non existing file, should return 404

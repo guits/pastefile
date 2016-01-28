@@ -196,8 +196,17 @@ def get_file(request, id_file, config):
     else:
         path = config['UPLOAD_FOLDER']
 
+    # If the user agent is in the display list, format headers to direct display feature
+    if request.user_agent.browser in config['DISPLAY_FOR']:
+        return send_from_directory(path,
+                                   filename,
+                                   mimetype=db.db[id_file]['mime_type'],
+                                   attachment_filename=db.db[id_file]['real_name'])
+
+    # Else keep the regular send file
     return send_from_directory(path,
                                filename,
+                               mimetype=db.db[id_file]['mime_type'],
                                attachment_filename=db.db[id_file]['real_name'],
                                as_attachment=True)
 
