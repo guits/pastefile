@@ -21,7 +21,7 @@ You can either install by yourself with nginx or apache and use a custom configu
 If you just want to test pastefile quickly, we provide `pastefile-run.py` script only for test purpose.
 
 ```bash
-apt-get install git python-dev python-pip
+apt-get install -y git python-dev python-pip
 pip install -r https://raw.githubusercontent.com/guits/pastefile/master/requirements.txt
 git clone https://github.com/guits/pastefile.git
 cd pastefile && cp pastefile.cfg.sample pastefile.cfg
@@ -31,7 +31,7 @@ cd pastefile && cp pastefile.cfg.sample pastefile.cfg
 
 ## Standard
 ```bash
-apt-get install git nginx-full python-pip python-dev
+apt-get install -y git nginx-full python-pip python-dev uwsgi-plugin-python uwsgi
 pip install -r https://raw.githubusercontent.com/guits/pastefile/master/requirements.txt
 ```
 
@@ -109,9 +109,9 @@ server {
 
 ```
 [uwsgi]
-socket = /tmp/uwsgi.sock
-module = app:app
-chdir  = /var/www/pastefile/pastefile
+socket = /tmp/pastefile.sock
+module = pastefile.app:app
+chdir  = /var/www/pastefile
 uid = 33
 gid = 33
 env = PASTEFILE_SETTINGS=/etc/pastefile.cfg
@@ -119,7 +119,10 @@ processes = 1
 threads = 1
 ```
 
-You now just have to launch nginx and uwsgi via systemd:
+Enable it with:
+```ln -s /etc/uwsgi/apps-available/pastefile.ini /etc/uwsgi/apps-enabled/pastefile.ini```
+
+Now, you just have to launch nginx and uwsgi via systemd:
 
 ```bash
 systemctl start nginx.service uwsgi.service
