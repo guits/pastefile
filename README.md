@@ -44,7 +44,7 @@ git clone https://github.com/guits/pastefile.git /var/www/pastefile
 Write the configuration file:
 
 ```bash
-curl -s -o/etc/pastefile.cfg  https://raw.githubusercontent.com/guits/pastefile/doc/pastefile.cfg.sample
+curl -s -o/etc/pastefile.cfg  https://raw.githubusercontent.com/guits/pastefile/master/pastefile.cfg.sample
 ```
 
 Change parameters as you need:
