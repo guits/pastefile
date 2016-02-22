@@ -209,3 +209,35 @@ so you can just type:
 pastefile /my/file
 ```
 to easily upload a file.
+
+
+# Extra
+
+Simple script to take a screenshot on a selected region of the screen and then upload the screenshot on pastefile.
+The pastefile link will be automatically copy in your copy/paste buffer.
+
+
+```bash
+#!/bin/bash
+
+# require :
+# apt-get install imagemagick xsel libnotify-bin
+
+filename=$(mktemp --suffix=_screenshot.png)
+# Take the screenshot
+import $filename
+
+# Upload the file on pastefile
+url=$(curl -F "file=@${filename}" http://pastefile.fr)
+if [ "$?" = "0" ]; then
+    notify-send "image uploaded! $url"
+
+    # Add file to all clipboard
+    echo -n "$url"|xsel -i -p
+    echo -n "$url"|xsel -i -s
+    echo -n "$url"|xsel -i -b
+    echo "$url" >> /tmp/import.log
+else
+    notify-send --urgency=critical "Upload failed."
+fi
+```
