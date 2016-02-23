@@ -4,7 +4,6 @@ import json
 import logging
 import fcntl
 import time
-import tempfile
 import os
 
 
@@ -66,11 +65,9 @@ class JsonDB(object):
 
     def save(self):
         try:
-            fd, tmp_file = tempfile.mkstemp(prefix='jsondb-',
-                                            dir=self._tmp_dir)
-            json.dump(self.db, os.fdopen(fd, 'w'))
+            tmp_file = '%s.atomic' % self._dbfile
+            json.dump(self.db, open(tmp_file, 'w'))
             os.rename(tmp_file, self._dbfile)
-
         except OSError as e:
             self._logger.error('Error while saving the db: %s' % e)
 
