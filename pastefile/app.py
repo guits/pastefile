@@ -96,7 +96,7 @@ def page_not_found(e):
     base_url = utils.build_base_url(env=request.environ)
 
     helps = (
-      ("Upload a file:", "curl -F file=@**filename** %s" % base_url),
+      ("Upload a file:", "curl %s -F file=@**filename**" % base_url),
       ("View all uploaded files:", "curl %s/ls" % base_url),
       ("Get infos about one file:", "curl %s/**file_id**/infos" % base_url),
       ("Get a file:", "curl -JO %s/**file_id**" % base_url),
