@@ -134,7 +134,7 @@ class FlaskrTestCase(unittest.TestCase):
 
         # Upload a txt file and random file
         binary_file = osjoin(self.testdir, 'binary_file')
-        binary_md5 = write_random_file(binary_file)
+        binary_md5 = write_file(binary_file, '')
         self.app.post('/', data={'file': (open(binary_file, 'r'), 'test_pastefile.binary'),})
 
         txt_file = osjoin(self.testdir, 'txt_file')
@@ -153,7 +153,7 @@ class FlaskrTestCase(unittest.TestCase):
         # Header Content-Disposition should not have attachment
         # Content-type should contain the good mem type
         rv = self.app.get("/%s" % (binary_md5), headers={'User-Agent': 'firefox'})
-        self.assertEquals(rv.headers['Content-Type'], 'application/octet-stream')
+        self.assertEquals(rv.headers['Content-Type'], 'inode/x-empty') # Type for empty file
         self.assertFalse('Content-Disposition' in rv.headers)
 
         rv = self.app.get("/%s" % (txt_md5), headers={'User-Agent': 'firefox'})
