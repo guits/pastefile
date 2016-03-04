@@ -1,6 +1,8 @@
 Pastefile           [![Build Status](https://travis-ci.org/guits/pastefile.svg?branch=master)](https://travis-ci.org/guits/pastefile)
 =========
 
+![Pastefile logo](https://github.com/AlexandreNo/pastefile/blob/master/wonderful_logo.png?raw=true)
+
 Little daemon written with python flask for sharing any files quickly via http
 ------------------------------------------------------------------------------
 
