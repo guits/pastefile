@@ -13,7 +13,6 @@ from werkzeug import secure_filename
 
 LOG = logging.getLogger(__name__)
 
-
 def get_infos_file_from_md5(md5, dbfile):
     # Open JsonDB for read only
     db = JsonDB(dbfile=dbfile)

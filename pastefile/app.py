@@ -9,7 +9,7 @@ from pastefile import utils
 from pastefile import controller
 
 
-app = Flask(__name__)
+app = Flask("pastefile")
 LOG = logging.getLogger(app.config['LOGGER_NAME'])
 LOG.setLevel(logging.DEBUG)
 hdl_stream = logging.StreamHandler()
@@ -17,6 +17,7 @@ hdl_stream.setLevel(logging.INFO)
 formatter_stream = logging.Formatter('%(message)s')
 hdl_stream.setFormatter(formatter_stream)
 LOG.addHandler(hdl_stream)
+
 
 try:
     app.config.from_envvar('PASTEFILE_SETTINGS')
