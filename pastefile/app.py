@@ -26,7 +26,7 @@ except RuntimeError:
     exit(1)
 
 try:
-    if os.environ['TESTING'] != 'TRUE':
+    if os.environ['TESTING'] == 'TRUE':
         hdl_file = logging.FileHandler(filename=app.config['LOG'])
         hdl_file.setLevel(logging.DEBUG)
         formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
