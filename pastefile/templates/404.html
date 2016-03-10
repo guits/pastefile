@@ -1,4 +1,3 @@
-{% block body %}
 {%- if 'curl' in user_agent -%}
 Usage:
 
@@ -9,24 +8,76 @@ Usage:
 {% endfor -%}
 
 Source : https://github.com/guits/pastefile
-
 {% else -%}
-<!doctype html>
+{% block head %}
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+<script src="http://code.jquery.com/jquery-2.2.1.min.js"></script>
 <title>Pastefile</title>
-<h1>Upload new File</h1>
-<form action="" method=post enctype=multipart/form-data>
-  <p><input type=file name=file><br>
-     <input type=checkbox name=burn value="true">burn after read<br><br>
-     <input type=submit value=Upload>
-</form><br><br>
-<b>Usage:</b><br><br>
-
-{% for title, command in helps -%}
-{{ title }}</br>
-# {{ command }}</br></br>
-
-{% endfor %}
-
-Source : <a href="https://github.com/guits/pastefile">https://github.com/guits/pastefile</a>
-{%- endif -%}
+<style>.container {max-width: 730px; margin-top: 10px;} #inputfile {margin:auto; padding-left:100px;}</style>
 {% endblock %}
+{% block body %}
+<div class="container">
+<div class="header clearfix">
+   <nav>
+      <ul class="nav nav-pills pull-right">
+         <li role="presentation" class="active"><a href="#">Home</a></li>
+         <li role="presentation"><a href="#help">Help</a></li>
+         <li role="presentation"><a href="#about">About</a></li>
+      </ul>
+   </nav>
+   <h3 class="text-muted">Pastefile</h3>
+</div>
+<div class="jumbotron">
+   <div class="row">
+      <div class="col-md-12">
+         <h2 class="text-center">
+            <span class="glyphicon glyphicon-upload text-center" aria-hidden="true"></span>
+            Upload a File
+         </h2>
+         </br>
+         <form id="upload" class="text-center" action="" method=post enctype=multipart/form-data>
+            <div class="form-group">
+               <label for="inputfile">File</label>
+               <input type=file name=file id="inputfile">
+            </div>
+            <div class="checkbox">
+               <label>
+               <input type=checkbox name=burn value="true">Burn after read<br><br>
+               </label>
+            </div>
+            <button type="submit" class="btn btn-success">Upload !</button>
+         </form>
+      </div>
+   </div>
+</div>
+<div class="panel panel-default" id="help">
+   <div class="panel-heading"><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> Help</div>
+   <div class="panel-body">
+      <div class="col-lg-6">
+         {% for title, command in helps -%}
+         {% if loop.index == 4 %}
+      </div>
+      <div class="col-lg-6">
+         {% else %}
+         <h4>{{ title }}</h4>
+         <div class="well well-sm">{{ command }}</div>
+         {% endif %}
+         {% endfor %}
+      </div>
+   </div>
+</div>
+<div class="panel panel-danger" id="about">
+   <div class="panel-body">
+      <p class="text-center">Made with <span class="glyphicon glyphicon-heart" aria-hidden="true"></span> by  Guillaume Abrioux</br>
+         <a href="https://github.com/guits/pastefile">
+         <span class="glyphicon glyphicon-console" aria-hidden="true"></span> Github
+         </a>
+      </p>
+   </div>
+</div>
+{% endblock %}
+{% endif %}
