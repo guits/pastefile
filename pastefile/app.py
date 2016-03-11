@@ -8,7 +8,6 @@ from flask import render_template
 from pastefile import utils
 from pastefile import controller
 
-
 app = Flask("pastefile")
 LOG = logging.getLogger(app.config['LOGGER_NAME'])
 LOG.setLevel(logging.DEBUG)
@@ -18,6 +17,19 @@ formatter_stream = logging.Formatter('%(message)s')
 hdl_stream.setFormatter(formatter_stream)
 LOG.addHandler(hdl_stream)
 
+
+def init_default_configuration(_app):
+    _app.config.setdefault('UPLOAD_FOLDER', "/opt/pastefile/files/")
+    _app.config.setdefault('FILE_LIST', "/opt/pastefile/uploaded_files_jsondb")
+    _app.config.setdefault('TMP_FOLDER', "/opt/pastefile/tmp")
+    _app.config.setdefault('EXPIRE',  "86400")
+    _app.config.setdefault('DEBUG_PORT',  "5000")
+    _app.config.setdefault('LOG', "/opt/pastefile/pastefile.log")
+    _app.config.setdefault('DISABLED_FEATURE', [])
+    _app.config.setdefault('DISPLAY_FOR', ['chrome', 'firefox'])
+
+# Set default configuration values
+init_default_configuration(_app=app)
 
 try:
     app.config.from_envvar('PASTEFILE_SETTINGS')
