@@ -9,7 +9,7 @@ from pastefile import utils
 from pastefile import controller
 
 app = Flask("pastefile")
-LOG = logging.getLogger(app.config['LOGGER_NAME'])
+LOG = app.logger
 LOG.setLevel(logging.DEBUG)
 hdl_stream = logging.StreamHandler()
 hdl_stream.setLevel(logging.INFO)
