@@ -9,5 +9,5 @@
 
 envsubst '$NGINX_WORKER_PROCESSES $NGINX_WORKER_CONNECTIONS $NGINX_KEEPALIVE_TIMEOUT' < /opt/pastefile/nginx.conf.template > /etc/nginx/nginx.conf
 envsubst '$NGINX_DEFAULT_PORT $NGINX_APP_NAME $UWSGI_SOCK' < /opt/pastefile/vhost.conf.template > /etc/nginx/conf.d/pastefile.conf
-uwsgi -s $UWSGI_SOCK -w app:app --chdir /var/www/pastefile/pastefile --uid 33 --gid 33 --env PASTEFILE_SETTINGS=/etc/pastefile.cfg --enable-threads --daemonize=/tmp/uwsgi-pastefile.log
+ uwsgi -s $UWSGI_SOCK -w pastefile.app:app --chdir /var/www/pastefile --uid 33 --gid 33 --env PASTEFILE_SETTINGS=/etc/pastefile.cfg --enable-threads --daemonize=/tmp/uwsgi-pastefile.log
 nginx -g "daemon off;"
