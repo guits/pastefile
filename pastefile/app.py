@@ -13,7 +13,7 @@ LOG = app.logger
 LOG.setLevel(logging.DEBUG)
 hdl_stream = logging.StreamHandler()
 hdl_stream.setLevel(logging.INFO)
-formatter_stream = logging.Formatter('%(message)s')
+formatter_stream = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 hdl_stream.setFormatter(formatter_stream)
 LOG.addHandler(hdl_stream)
 
