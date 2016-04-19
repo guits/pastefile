@@ -19,7 +19,7 @@ LOG.addHandler(hdl_stream)
 
 
 def init_default_configuration(_app):
-    _app.config.setdefault('UPLOAD_FOLDER', "/opt/pastefile/files/")
+    _app.config.setdefault('UPLOAD_FOLDER', "/opt/pastefile/files")
     _app.config.setdefault('FILE_LIST', "/opt/pastefile/uploaded_files_jsondb")
     _app.config.setdefault('TMP_FOLDER', "/opt/pastefile/tmp")
     _app.config.setdefault('EXPIRE',  "86400")
@@ -28,8 +28,31 @@ def init_default_configuration(_app):
     _app.config.setdefault('DISABLED_FEATURE', [])
     _app.config.setdefault('DISPLAY_FOR', ['chrome', 'firefox'])
 
+
+def init_check_directories(_app):
+    for key in ["UPLOAD_FOLDER", "FILE_LIST", "TMP_FOLDER", "LOG"]:
+        directory = _app.config[key].rstrip('/')
+        if not os.path.isdir(os.path.dirname(directory)):
+            LOG.error("'%s' doesn't exist or is not a directory" % os.path.dirname(directory))
+            return False
+
+    for key in ["UPLOAD_FOLDER", "TMP_FOLDER"]:
+        directory = _app.config[key].rstrip('/')
+        if os.path.exists(directory):
+            continue
+        LOG.warning("'%s' doesn't exist, creating" % directory)
+        try:
+            os.makedirs(directory)
+        except OSError as e:
+            LOG.error("%s" % e)
+            return False
+
+    return True
+
+
 # Set default configuration values
 init_default_configuration(_app=app)
+
 
 try:
     app.config.from_envvar('PASTEFILE_SETTINGS')
@@ -38,6 +61,7 @@ except RuntimeError:
     LOG.error('PASTEFILE_SETTINGS envvar is not set')
     exit(1)
 
+
 try:
     if os.environ['TESTING'] == 'TRUE':
         hdl_file = logging.FileHandler(filename=app.config['LOG'])
@@ -45,6 +69,10 @@ try:
         formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         hdl_file.setFormatter(formatter_file)
         LOG.addHandler(hdl_file)
+    else:
+        # check dirs only in non testing mode
+        if not init_check_directories(_app=app):
+            exit(1)
 except KeyError:
     pass
 
