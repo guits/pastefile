@@ -6,6 +6,6 @@ server {
 
         location @${NGINX_APP_NAME} {
             include uwsgi_params;
-            uwsgi_pass uwsgi-or-whatever:9000;
+            uwsgi_pass pastefile:8080;
         }
 }

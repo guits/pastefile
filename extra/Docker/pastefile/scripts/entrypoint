@@ -1,0 +1,3 @@
+#!/bin/sh
+
+uwsgi -s :8080 -w pastefile.app:app --chdir /var/www/pastefile --uid 33 --gid 33 --env PASTEFILE_SETTINGS=/etc/pastefile.cfg --enable-threads
