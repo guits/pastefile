@@ -1,3 +1,6 @@
+# This project has moved to : https://github.com/pastefile/pastefile.git
+
+
 Pastefile           [![Build Status](https://travis-ci.org/guits/pastefile.svg?branch=master)](https://travis-ci.org/guits/pastefile)
 =========
 
